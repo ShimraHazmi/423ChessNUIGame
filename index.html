@@ -3,11 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <title>Chess NUI</title>
+  <link rel="stylesheet" href="./src/chessboardjs-1.0.0/css/chessboard-1.0.0.min.css">
 </head>
+<!-- python -m http.server 8000 -->
 <body>
   <h1>Chess NUI Project</h1>
   <button id="start">Start Voice</button>
 
+  <div id="board1" style="width: 400px"></div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="./src/chessboardjs-1.0.0/js/chessboard-1.0.0.min.js"></script>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
