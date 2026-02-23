@@ -4,9 +4,12 @@ document.getElementById("start").onclick = () => {
   startListening();
 };
 
-var board1 = Chessboard('board1', 'start');
-
-var board1 = Chessboard('board1', {
-  position: 'start',
+var board2 = Chessboard('board2', {
+  draggable: true,
+  dropOffBoard: 'trash',
+  sparePieces: true,
   pieceTheme: './src/chessboardjs-1.0.0/img/chesspieces/wikipedia/{piece}.png'
-});
+})
+
+$('#startBtn').on('click', board2.start)
+$('#clearBtn').on('click', board2.clear)
