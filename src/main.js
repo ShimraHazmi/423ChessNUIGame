@@ -1,15 +1,13 @@
-import { startListening } from "./speech.js";
+// import { startListening } from "./speech.js";
 
-document.getElementById("start").onclick = () => {
-  startListening();
-};
+import "./speech.js";
 
-var board2 = Chessboard('board2', {
+var board2 = Chessboard('board', {
   draggable: true,
   dropOffBoard: 'trash',
   sparePieces: true,
   pieceTheme: './src/chessboardjs-1.0.0/img/chesspieces/wikipedia/{piece}.png'
 })
 
-$('#startBtn').on('click', board2.start)
-$('#clearBtn').on('click', board2.clear)
+$('.start-btn').on('click', board2.start)
+$('.clear-btn').on('click', board2.clear)

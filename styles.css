@@ -5,3 +5,209 @@
     height: 100vh;
     background-color: red;
 }
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #5d73d4 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+
+/* Layout for the panels */
+
+.layout {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+/* ------------------------------------------------ */
+
+/* White backgrounds on the text and board */
+.panel {
+    max-width: 520px;
+    flex: 1 1 420px;
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* ------------------------------------------------ */
+
+h1 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 2.5em;
+    text-align: center;
+}
+
+.subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+}
+
+/* Button styles */
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+
+button {
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    background: #f0f0f0;
+    color: #333;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+
+button:hover {
+    background: #e0e0e0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* ------------------------------------------------ */
+
+.button-group button.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.section {
+    display: none;
+    margin-top: 30px;
+    padding: 30px;
+    background: #f9f9f9;
+    border-radius: 12px;
+    border: 2px solid #e0e0e0;
+}
+
+.section.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section p {
+    color: #555;
+    margin-bottom: 20px;
+    font-size: 1.05em;
+    line-height: 1.6;
+}
+
+#speechOutput {
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+
+
+canvas {
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    /* background: white; */
+    cursor: crosshair;
+    display: block;
+    margin: 20px auto;
+}
+
+#recordBtn, #startCameraBtn {
+    background: #28a745;
+    color: white;
+}
+
+#recordBtn:hover, #startCameraBtn:hover {
+    background: #218838;
+}
+
+
+
+
+
+
+/* Start Position and Clear Board Buttons*/
+.start-clear-btns {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 10px 0;
+}
+
+.start-btn {
+    background: #28d136;
+    color: white;
+    padding: 12px;
+    display: block;
+    border: none;
+}
+
+.clear-btn {
+    background: #dc3545;
+    color: white;
+    padding: 12px;
+    border: none;
+}
+ /* --------------------------------------------------------*/
+
+
+/* Chessboard visual */
+
+#board {
+    display: block;
+    margin: 0 auto 12px;
+    border-radius: 8px;
+    background: rgb(233, 220, 208);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* --------------------------------------------------------*/
+
+/* Background image with dimming */
+body {
+    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('Chess-Illustration.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* --------------------------------------------------------*/
+

@@ -1,23 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <title>Chess NUI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speech Controlled Chess Game</title>
+
+    <title> Voice Controlled Chess Game</title>
   <link rel="stylesheet" href="./src/chessboardjs-1.0.0/css/chessboard-1.0.0.min.css">
   <link rel="stylesheet" href="./styles.css">
+
 </head>
-<!-- in the event of CORS discrepancies -->
-<!-- python -m http.server 8000 -->
+
 <body>
-  <h1>Chess NUI Project</h1>
-  <button id="start" style="width: 100px; height: 50px;">Start Voice</button>
+    <div class="layout">
+      <div class="panel">
+        <h1>🖐️ Speech Controlled Chess Game </h1>
+        <p class="subtitle">A chess game controlled by voice commands duhhh</p>
 
-  <div id="board2" style="width: 400px"></div>
-  <button id="startBtn">Start Position</button>
-  <button id="clearBtn">Clear Board</button>
+        <div class="button-group">
+          <button id="speechBtn" class="nav-btn">🎤 Speech</button>
+        </div>
 
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="./src/chessboardjs-1.0.0/js/chessboard-1.0.0.min.js"></script>
-  <script type="module" src="./src/main.js"></script>
+        <!-- SPEECH -->
+        <div id="speechSection" class="section">
+          <p><span class="info-badge">Voice Input</span> Use your voice to interact</p>
+          <button id="recordBtn">🎤 Start Recording</button>
+          <div id="speechOutput">Say "hi" or "hello"</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div id="board" style="width: 400px"></div>
+
+        <div class="start-clear-btns">
+          <button class="start-btn">Start Game</button>
+          <button class="clear-btn">Clear Board</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global helper to switch sections -->
+    <script>
+        const speechBtn = document.getElementById("speechBtn");
+
+        const speechSection = document.getElementById("speechSection");
+
+        const navButtons = document.querySelectorAll('.nav-btn');
+
+        function showSection(section, activeBtn) {
+            // Hide all sections
+            [speechSection, mediapipeSection, gestureSection].forEach(s => {
+                s.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected section and highlight button
+            section.classList.add('active');
+            activeBtn.classList.add('active');
+        }
+
+        speechBtn.onclick = () => showSection(speechSection, speechBtn);
+    </script>
+
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="./src/chessboardjs-1.0.0/js/chessboard-1.0.0.min.js"></script>
+    <script type="module" src="./src/main.js"></script>
+
+
 </body>
 </html>
