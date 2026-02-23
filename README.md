@@ -6,4 +6,3 @@ imports and documentation:
 - frontend chessboard and pieces found here: 
 https://chessboardjs.com/#start
 
-AI may or may not have been used :>
