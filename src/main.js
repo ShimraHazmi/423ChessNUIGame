@@ -1,133 +1,105 @@
-// ============================================================
-// main.js — Game setup, timer, and voice command wiring
-// ============================================================
+// Import speech module
+import "./speech.js";
 
-import { onVoiceCommand } from "./speech.js";
+// NOTE: this example uses the chess.js library:
+// https://github.com/jhlywa/chess.js
+//original: https://chessboardjs.com/examples#5000
 
-// --- Chessboard setup ---
-var board = Chessboard("board", {
+var board = null
+var game = new Chess()
+var $status = $('#speechOutput')  // Using your existing speechOutput div
+var $fen = $('#fen')
+var $pgn = $('#pgn')
+
+function onDragStart (source, piece, position, orientation) {
+  // do not pick up pieces if the game is over
+  if (game.game_over()) return false
+
+  // only pick up pieces for the side to move
+  if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+      (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+    return false
+  }
+}
+
+function onDrop (source, target) {
+  // see if the move is legal
+  var move = game.move({
+    from: source,
+    to: target,
+    promotion: 'q' // NOTE: always promote to a queen for example simplicity
+  })
+
+  // illegal move
+  if (move === null) return 'snapback'
+
+  updateStatus()
+}
+
+// update the board position after the piece snap
+// for castling, en passant, pawn promotion
+function onSnapEnd () {
+  board.position(game.fen())
+}
+
+function updateStatus () {
+  var status = ''
+
+  var moveColor = 'White'
+  if (game.turn() === 'b') {
+    moveColor = 'Black'
+  }
+
+  // checkmate?
+  if (game.in_checkmate()) {
+    status = 'Game over, ' + moveColor + ' is in checkmate.'
+  }
+
+  // draw?
+  else if (game.in_draw()) {
+    status = 'Game over, drawn position'
+  }
+
+  // game still on
+  else {
+    status = moveColor + ' to move'
+
+    // check?
+    if (game.in_check()) {
+      status += ', ' + moveColor + ' is in check'
+    }
+  }
+
+  $status.html(status)
+  // Optionally display FEN and PGN if you add those divs to your HTML
+  // $fen.html(game.fen())
+  // $pgn.html(game.pgn())
+}
+
+var config = {
   draggable: true,
-  dropOffBoard: "trash",
-  sparePieces: true,
-  pieceTheme: "./src/chessboardjs-1.0.0/img/chesspieces/wikipedia/{piece}.png",
-});
-
-// --- Timer state ---
-let whiteSeconds = 0;
-let blackSeconds = 0;
-let activeColor = "white"; // whose clock is ticking
-let timerInterval = null;
-let isPaused = false;
-
-// DOM references
-const timerContainer = document.getElementById("timerContainer");
-const whiteTimerEl = document.getElementById("whiteTimer");
-const blackTimerEl = document.getElementById("blackTimer");
-const timerStatus = document.getElementById("timerStatus");
-
-// --- Timer helpers ---
-function formatTime(totalSeconds) {
-  const m = Math.floor(totalSeconds / 60)
-    .toString()
-    .padStart(2, "0");
-  const s = (totalSeconds % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
+  position: 'start',
+  onDragStart: onDragStart,
+  onDrop: onDrop,
+  onSnapEnd: onSnapEnd,
+  pieceTheme: './src/chessboardjs-1.0.0/img/chesspieces/wikipedia/{piece}.png'  // Your piece theme
 }
+board = Chessboard('board', config)  // 'board' matches your HTML div id
 
-function updateTimerDisplay() {
-  whiteTimerEl.textContent = formatTime(whiteSeconds);
-  blackTimerEl.textContent = formatTime(blackSeconds);
+updateStatus()
 
-  // Highlight the active player's clock
-  whiteTimerEl.classList.toggle("active-timer", activeColor === "white" && !isPaused);
-  blackTimerEl.classList.toggle("active-timer", activeColor === "black" && !isPaused);
-}
+// Wire up your Start and Clear buttons
+$('.start-btn').on('click', function() {
+  game.reset()
+  board.start()
+  updateStatus()
+})
 
-function tickTimer() {
-  if (activeColor === "white") {
-    whiteSeconds++;
-  } else {
-    blackSeconds++;
-  }
-  updateTimerDisplay();
-}
+$('.clear-btn').on('click', function() {
+  game.clear()
+  board.clear()
+  $status.html('Board cleared')
+})
 
-function startTimer() {
-  if (timerInterval) clearInterval(timerInterval);
-  isPaused = false;
-  timerInterval = setInterval(tickTimer, 1000);
-  timerStatus.textContent = "Game in progress";
-  timerStatus.classList.remove("paused");
-  updateTimerDisplay();
-}
-
-function pauseTimer() {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-  isPaused = true;
-  timerStatus.textContent = "⏸ Paused";
-  timerStatus.classList.add("paused");
-  updateTimerDisplay();
-}
-
-function resumeTimer() {
-  if (!timerInterval && !isPaused) return; // nothing to resume
-  isPaused = false;
-  timerInterval = setInterval(tickTimer, 1000);
-  timerStatus.textContent = "Game in progress";
-  timerStatus.classList.remove("paused");
-  updateTimerDisplay();
-}
-
-function resetTimer() {
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = null;
-  isPaused = false;
-  whiteSeconds = 0;
-  blackSeconds = 0;
-  activeColor = "white";
-  timerStatus.textContent = "Game in progress";
-  timerStatus.classList.remove("paused");
-  updateTimerDisplay();
-}
-
-/** Switch the active clock (call after each move) */
-export function switchClock() {
-  activeColor = activeColor === "white" ? "black" : "white";
-  updateTimerDisplay();
-}
-
-// --- Game actions ---
-function startGame() {
-  board.start();
-  resetTimer();
-  timerContainer.classList.remove("hidden");
-  startTimer();
-}
-
-function clearBoard() {
-  board.clear();
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = null;
-  timerContainer.classList.add("hidden");
-}
-
-function resetGame() {
-  board.start();
-  resetTimer();
-  timerContainer.classList.remove("hidden");
-  startTimer();
-}
-
-// --- Button click handlers ---
-$(".start-btn").on("click", startGame);
-$(".clear-btn").on("click", clearBoard);
-
-// --- Register voice commands ---
-onVoiceCommand("start", startGame);
-onVoiceCommand("clear", clearBoard);
-onVoiceCommand("pause", pauseTimer);
-onVoiceCommand("resume", resumeTimer);
-onVoiceCommand("reset", resetGame);
+// Export for use in speech.js
+export { game, board, updateStatus }
