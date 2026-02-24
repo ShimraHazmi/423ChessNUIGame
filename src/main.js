@@ -1,15 +1,89 @@
-// Import speech module
-import "./speech.js";
+// Import speech module and register voice commands
+import { onVoiceCommand } from "./speech.js";
 
-// NOTE: this example uses the chess.js library:
-// https://github.com/jhlywa/chess.js
-//original: https://chessboardjs.com/examples#5000
-
+// chess.js game instance (loaded from CDN as global)
 var board = null
 var game = new Chess()
 var $status = $('#speechOutput')  // Using your existing speechOutput div
 var $fen = $('#fen')
 var $pgn = $('#pgn')
+
+// --- timer state ---
+let whiteSeconds = 0
+let blackSeconds = 0
+let activeColor = 'white'
+let timerInterval = null
+let isPaused = false
+
+const timerContainer = document.getElementById('timerContainer')
+const whiteTimerEl = document.getElementById('whiteTimer')
+const blackTimerEl = document.getElementById('blackTimer')
+const timerStatusEl = document.getElementById('timerStatus')
+
+function formatTime(s) {
+  const m = Math.floor(s / 60).toString().padStart(2, '0')
+  const sec = (s % 60).toString().padStart(2, '0')
+  return `${m}:${sec}`
+}
+
+function updateTimerDisplay() {
+  whiteTimerEl.textContent = formatTime(whiteSeconds)
+  blackTimerEl.textContent = formatTime(blackSeconds)
+  whiteTimerEl.classList.toggle('active-timer', activeColor === 'white' && !isPaused)
+  blackTimerEl.classList.toggle('active-timer', activeColor === 'black' && !isPaused)
+}
+
+function tickTimer() {
+  if (activeColor === 'white') whiteSeconds++
+  else blackSeconds++
+  updateTimerDisplay()
+}
+
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval)
+  isPaused = false
+  timerInterval = setInterval(tickTimer, 1000)
+  timerStatusEl.textContent = 'Game in progress'
+  timerStatusEl.classList.remove('paused')
+  updateTimerDisplay()
+}
+
+function pauseTimer() {
+  if (timerInterval) clearInterval(timerInterval)
+  timerInterval = null
+  isPaused = true
+  timerStatusEl.textContent = '⏸ Paused'
+  timerStatusEl.classList.add('paused')
+  updateTimerDisplay()
+}
+
+function resumeTimer() {
+  if (isPaused) {
+    isPaused = false
+    timerInterval = setInterval(tickTimer, 1000)
+    timerStatusEl.textContent = 'Game in progress'
+    timerStatusEl.classList.remove('paused')
+    updateTimerDisplay()
+  }
+}
+
+function resetTimer() {
+  if (timerInterval) clearInterval(timerInterval)
+  timerInterval = null
+  isPaused = false
+  whiteSeconds = 0
+  blackSeconds = 0
+  activeColor = 'white'
+  timerStatusEl.textContent = 'Game in progress'
+  timerStatusEl.classList.remove('paused')
+  updateTimerDisplay()
+}
+
+// switch the clock after each move
+function switchClock() {
+  activeColor = activeColor === 'white' ? 'black' : 'white'
+  updateTimerDisplay()
+}
 
 function onDragStart (source, piece, position, orientation) {
   // do not pick up pieces if the game is over
@@ -33,6 +107,8 @@ function onDrop (source, target) {
   // illegal move
   if (move === null) return 'snapback'
 
+  // switch whose clock is ticking after a valid move
+  switchClock()
   updateStatus()
 }
 
@@ -92,14 +168,50 @@ updateStatus()
 $('.start-btn').on('click', function() {
   game.reset()
   board.start()
+  resetTimer()
+  timerContainer.classList.remove('hidden')
+  startTimer()
   updateStatus()
 })
 
 $('.clear-btn').on('click', function() {
   game.clear()
   board.clear()
+  if (timerInterval) clearInterval(timerInterval)
+  timerInterval = null
+  timerContainer.classList.add('hidden')
   $status.html('Board cleared')
 })
 
-// Export for use in speech.js
+// wire up voice commands
+onVoiceCommand('start', function() {
+  game.reset()
+  board.start()
+  resetTimer()
+  timerContainer.classList.remove('hidden')
+  startTimer()
+  updateStatus()
+})
+
+onVoiceCommand('clear', function() {
+  game.clear()
+  board.clear()
+  if (timerInterval) clearInterval(timerInterval)
+  timerInterval = null
+  timerContainer.classList.add('hidden')
+})
+
+onVoiceCommand('pause', pauseTimer)
+onVoiceCommand('resume', resumeTimer)
+
+onVoiceCommand('reset', function() {
+  game.reset()
+  board.start()
+  resetTimer()
+  timerContainer.classList.remove('hidden')
+  startTimer()
+  updateStatus()
+})
+
+// Export for other modules if needed
 export { game, board, updateStatus }
