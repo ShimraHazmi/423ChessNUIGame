@@ -24,14 +24,37 @@
 
         <!-- SPEECH -->
         <div id="speechSection" class="section">
-          <p><span class="info-badge">Voice Input</span> Use your voice to interact</p>
+          <p><span class="info-badge">Voice Input</span> Use your voice to control the game</p>
           <button id="recordBtn">🎤 Start Recording</button>
-          <div id="speechOutput">Say "hi" or "hello"</div>
+          <div id="speechOutput">Say a command...</div>
+          <div class="voice-commands-list">
+            <p><strong>Available commands:</strong></p>
+            <ul>
+              <li>"Start game" – start the game &amp; timer</li>
+              <li>"Clear board" – clear all pieces</li>
+              <li>"Pause" – pause the timer</li>
+              <li>"Resume" – resume the timer</li>
+              <li>"Reset" – reset the game &amp; timer</li>
+            </ul>
+          </div>
         </div>
       </div>
 
       <div class="panel">
         <div id="board" style="width: 400px"></div>
+
+        <!-- Timer (hidden until game starts) -->
+        <div id="timerContainer" class="timer-container hidden">
+          <div class="timer-player">
+            <span class="timer-label">⬜ White</span>
+            <span id="whiteTimer" class="timer-display">00:00</span>
+          </div>
+          <div class="timer-status" id="timerStatus">Game in progress</div>
+          <div class="timer-player">
+            <span class="timer-label">⬛ Black</span>
+            <span id="blackTimer" class="timer-display">00:00</span>
+          </div>
+        </div>
 
         <div class="start-clear-btns">
           <button class="start-btn">Start Game</button>
@@ -50,7 +73,7 @@
 
         function showSection(section, activeBtn) {
             // Hide all sections
-            [speechSection, mediapipeSection, gestureSection].forEach(s => {
+            [speechSection].forEach(s => {
                 s.classList.remove('active');
             });
             
