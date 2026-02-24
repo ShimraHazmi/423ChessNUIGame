@@ -1,30 +1,17 @@
-// ============================================================
-// speech.js — Voice command engine for the chess game
-// ============================================================
-// Supported commands:
-//   "start game" / "start"   → starts the game & timer
-//   "clear board" / "clear"  → clears the board
-//   "pause"                  → pauses the timer
-//   "resume" / "continue"    → resumes the timer
-//   "reset"                  → resets the game & timer
-// ============================================================
+// speech.js - handles voice commands
 
 const recordBtn = document.getElementById("recordBtn");
 const speechOutput = document.getElementById("speechOutput");
 
-// --- Command callback registry (main.js will register handlers) ---
+// stores command callbacks that main.js registers
 const commandHandlers = {};
 
-/**
- * Register a callback for a voice command.
- * @param {string} command  - one of: "start", "clear", "pause", "resume", "reset"
- * @param {Function} handler - function to call when the command is spoken
- */
+// lets other files register what happens when a command is spoken
 export function onVoiceCommand(command, handler) {
   commandHandlers[command] = handler;
 }
 
-// --- Web Speech API setup ---
+// set up speech recognition
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -37,7 +24,7 @@ if (!SpeechRecognition) {
   recognition.continuous = false;
   recognition.interimResults = false;
 
-  // --- Start listening on button click ---
+  // mic button click
   recordBtn.onclick = () => {
     speechOutput.textContent = "🎤 Listening...";
     speechOutput.style.color = "#667eea";
@@ -48,7 +35,7 @@ if (!SpeechRecognition) {
     }
   };
 
-  // --- Parse and dispatch voice commands ---
+  // figure out what the user said and run the matching command
   recognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript.toLowerCase().trim();
     speechOutput.textContent = `You said: "${transcript}"`;
@@ -81,7 +68,7 @@ if (!SpeechRecognition) {
       speechOutput.style.color = "#dc3545";
     }
 
-    // Reset display after a short delay
+    // reset text color after a bit
     setTimeout(() => {
       speechOutput.style.color = "#333";
     }, 3000);
@@ -95,7 +82,7 @@ if (!SpeechRecognition) {
     }
   }
 
-  // --- Error handling ---
+  // something went wrong with the mic
   recognition.onerror = (event) => {
     speechOutput.textContent = "Sorry, I couldn't hear you. Try again!";
     speechOutput.style.color = "#dc3545";
@@ -105,5 +92,3 @@ if (!SpeechRecognition) {
     console.log("Speech recognition ended");
   };
 }
-
-// FLOW: User speaks → Mic → Web Speech API → Text → Command parser → Callback → Game action
