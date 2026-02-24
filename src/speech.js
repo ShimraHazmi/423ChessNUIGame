@@ -1,6 +1,7 @@
 // speech.js - handles voice commands
 
 const recordBtn = document.getElementById("recordBtn");
+const stopBtn = document.getElementById("stopBtn");
 const speechOutput = document.getElementById("speechOutput");
 
 // stores command callbacks that main.js registers
@@ -24,15 +25,27 @@ if (!SpeechRecognition) {
   recognition.continuous = false;
   recognition.interimResults = false;
 
-  // mic button click
-  recordBtn.onclick = () => {
-    speechOutput.textContent = "🎤 Listening...";
-    speechOutput.style.color = "#667eea";
+  // ask for mic permission then start listening
+  recordBtn.onclick = async () => {
     try {
+      // request mic permission explicitly
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      speechOutput.textContent = "🎤 Listening...";
+      speechOutput.style.color = "#667eea";
       recognition.start();
+      recordBtn.disabled = true;
+      stopBtn.disabled = false;
     } catch (error) {
-      speechOutput.textContent = "Click again to start listening.";
+      speechOutput.textContent = "Mic permission denied. Please allow microphone access.";
+      speechOutput.style.color = "#dc3545";
     }
+  };
+
+  // stop recording button
+  stopBtn.onclick = () => {
+    recognition.stop();
+    speechOutput.textContent = "Recording stopped.";
+    speechOutput.style.color = "#333";
   };
 
   // figure out what the user said and run the matching command
@@ -89,6 +102,8 @@ if (!SpeechRecognition) {
   };
 
   recognition.onend = () => {
+    recordBtn.disabled = false;
+    stopBtn.disabled = true;
     console.log("Speech recognition ended");
   };
 }

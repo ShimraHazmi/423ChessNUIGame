@@ -159,6 +159,28 @@ canvas {
     background: #218838;
 }
 
+#stopBtn {
+    background: #dc3545;
+    color: white;
+}
+
+#stopBtn:hover {
+    background: #c82333;
+}
+
+#recordBtn:disabled, #stopBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.record-btns {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
 
 
 
