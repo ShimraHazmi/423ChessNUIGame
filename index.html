@@ -45,7 +45,18 @@
       </div>
 
       <div class="panel">
-        <div id="board" style="width: 400px"></div>
+        <div class="menu-header">
+          <button id="menuBtn" class="menu-btn">Menu ⋮</button>
+        </div>
+        <div class="board-container">
+          <div id="board" style="width: 400px"></div>
+          <!-- Menu Popup -->
+          <div id="menuPopup" class="menu-popup hidden">
+            <button id="pauseMenuBtn" class="menu-option">⏸ Pause</button>
+            <button id="resumeMenuBtn" class="menu-option">▶ Resume</button>
+            <button id="resetMenuBtn" class="menu-option">↻ Reset</button>
+          </div>
+        </div>
 
         <!-- Timer (hidden until game starts) -->
         <div id="timerContainer" class="timer-container hidden">

@@ -213,5 +213,48 @@ onVoiceCommand('reset', function() {
   updateStatus()
 })
 
+// Menu button functionality
+const menuBtn = document.getElementById('menuBtn')
+const menuPopup = document.getElementById('menuPopup')
+const pauseMenuBtn = document.getElementById('pauseMenuBtn')
+const resumeMenuBtn = document.getElementById('resumeMenuBtn')
+const resetMenuBtn = document.getElementById('resetMenuBtn')
+
+// Toggle menu popup on button click
+menuBtn.addEventListener('click', function(e) {
+  e.stopPropagation()
+  menuPopup.classList.toggle('hidden')
+})
+
+// Close menu when clicking outside
+document.addEventListener('click', function(e) {
+  if (!menuBtn.contains(e.target) && !menuPopup.contains(e.target)) {
+    menuPopup.classList.add('hidden')
+  }
+})
+
+// Pause button in menu
+pauseMenuBtn.addEventListener('click', function() {
+  pauseTimer()
+  menuPopup.classList.add('hidden')
+})
+
+// Resume button in menu
+resumeMenuBtn.addEventListener('click', function() {
+  resumeTimer()
+  menuPopup.classList.add('hidden')
+})
+
+// Reset button in menu
+resetMenuBtn.addEventListener('click', function() {
+  game.reset()
+  board.start()
+  resetTimer()
+  timerContainer.classList.remove('hidden')
+  startTimer()
+  updateStatus()
+  menuPopup.classList.add('hidden')
+})
+
 // Export for other modules if needed
 export { game, board, updateStatus }
