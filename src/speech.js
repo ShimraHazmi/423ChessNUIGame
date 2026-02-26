@@ -1,5 +1,20 @@
-// Whisper API integration
+// speech.js - handles voice commands via OpenAI Whisper API
 import { OPENAI_API_KEY } from "./config.js";
+
+// DOM elements
+const recordBtn = document.getElementById("recordBtn");
+const stopBtn = document.getElementById("stopBtn");
+const speechOutput = document.getElementById("speechOutput");
+
+// stores command callbacks that main.js registers
+const commandHandlers = {};
+
+// lets other files register what happens when a command is spoken
+export function onVoiceCommand(command, handler) {
+  commandHandlers[command] = handler;
+}
+
+// --- Whisper API ---
 const WHISPER_API_URL = "https://api.openai.com/v1/audio/transcriptions";
 
 async function transcribeWithWhisper(audioBlob) {
@@ -10,9 +25,7 @@ async function transcribeWithWhisper(audioBlob) {
   try {
     const response = await fetch(WHISPER_API_URL, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`
-      },
+      headers: { "Authorization": `Bearer ${OPENAI_API_KEY}` },
       body: formData
     });
     if (!response.ok) {
@@ -25,42 +38,53 @@ async function transcribeWithWhisper(audioBlob) {
     return null;
   }
 }
-// MediaRecorder setup for capturing audio
+
+// --- MediaRecorder setup ---
 let mediaRecorder;
 let audioChunks = [];
-let audioBlob = null;
 
 recordBtn.onclick = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mediaRecorder = new MediaRecorder(stream);
     audioChunks = [];
+
     mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        audioChunks.push(event.data);
-      }
+      if (event.data.size > 0) audioChunks.push(event.data);
     };
+
     mediaRecorder.onstop = async () => {
-      audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
       speechOutput.textContent = "Transcribing...";
       speechOutput.style.color = "#667eea";
+
       const transcript = await transcribeWithWhisper(audioBlob);
       if (transcript) {
-        speechOutput.textContent = `Transcription: ${transcript}`;
+        speechOutput.textContent = `You said: "${transcript}"`;
         speechOutput.style.color = "#28a745";
-        // Try to match transcript to a registered command
+
         const normalized = transcript.trim().toLowerCase();
+        let matched = false;
         for (const cmd in commandHandlers) {
           if (normalized.includes(cmd)) {
-            commandHandlers[cmd](normalized);
+            commandHandlers[cmd]();
+            matched = true;
             break;
           }
         }
+        if (!matched) {
+          speechOutput.textContent = `"${transcript}" — command not recognized`;
+          speechOutput.style.color = "#dc3545";
+        }
       } else {
-        speechOutput.textContent = "Transcription failed.";
+        speechOutput.textContent = "Transcription failed. Try again.";
         speechOutput.style.color = "#dc3545";
       }
+
+      // Stop all mic tracks
+      stream.getTracks().forEach(t => t.stop());
     };
+
     mediaRecorder.start();
     speechOutput.textContent = "🎤 Recording...";
     speechOutput.style.color = "#667eea";
@@ -79,16 +103,3 @@ stopBtn.onclick = () => {
     stopBtn.disabled = true;
   }
 };
-// speech.js - handles voice commands
-
-const recordBtn = document.getElementById("recordBtn");
-const stopBtn = document.getElementById("stopBtn");
-const speechOutput = document.getElementById("speechOutput");
-
-// stores command callbacks that main.js registers
-const commandHandlers = {};
-
-// lets other files register what happens when a command is spoken
-export function onVoiceCommand(command, handler) {
-  commandHandlers[command] = handler;
-}
