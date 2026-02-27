@@ -213,6 +213,28 @@ onVoiceCommand('reset', function() {
   updateStatus()
 })
 
+onVoiceCommand('move', function(moveData) {
+  if (!moveData || !moveData.from || !moveData.to) {
+    $status.html('Could not parse move. Say like "A2 to A3".')
+    return
+  }
+
+  const move = game.move({
+    from: moveData.from,
+    to: moveData.to,
+    promotion: 'q'
+  })
+
+  if (!move) {
+    $status.html(`Illegal move: ${moveData.from} to ${moveData.to}`)
+    return
+  }
+
+  board.position(game.fen())
+  switchClock()
+  updateStatus()
+})
+
 // Menu button functionality
 const menuBtn = document.getElementById('menuBtn')
 const menuPopup = document.getElementById('menuPopup')

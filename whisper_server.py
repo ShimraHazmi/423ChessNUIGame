@@ -25,16 +25,39 @@ def transcribe(request):
         if not audio:
             response = JsonResponse({"error": "No file provided"}, status=400)
         else:
+            tmp_path = None
             try:
+                # Save audio to temp file
                 with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
                     for chunk in audio.chunks():
                         tmp.write(chunk)
                     tmp_path = tmp.name
-                result = model.transcribe(tmp_path)
-                os.unlink(tmp_path)
+                
+                file_size = os.path.getsize(tmp_path)
+                print(f"\n=== Transcription Request ===")
+                print(f"Audio file: {tmp_path}")
+                print(f"File size: {file_size} bytes")
+                
+                # Transcribe with Whisper (FP16=False for CPU)
+                result = model.transcribe(tmp_path, fp16=False)
+                
+                print(f"✓ Transcription: '{result['text']}'")
                 response = JsonResponse({"text": result["text"]})
+                
             except Exception as e:
+                print(f"\n✗ TRANSCRIPTION ERROR:")
+                print(f"  Type: {type(e).__name__}")
+                print(f"  Message: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 response = JsonResponse({"error": str(e)}, status=500)
+            finally:
+                # Cleanup temp file
+                if tmp_path and os.path.exists(tmp_path):
+                    try:
+                        os.unlink(tmp_path)
+                    except:
+                        pass
     else:
         response = JsonResponse({"error": "Method not allowed"}, status=405)
 

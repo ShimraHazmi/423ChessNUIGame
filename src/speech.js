@@ -10,7 +10,31 @@ const commandHandlers = {};
 
 // lets other files register what happens when a command is spoken
 export function onVoiceCommand(command, handler) {
-  commandHandlers[command] = handler;
+  commandHandlers[command.toLowerCase()] = handler;
+}
+
+function normalizeTranscript(text) {
+  if (!text) return "";
+  let normalized = text.toLowerCase();
+  normalized = normalized.replace(/[^a-z0-9\s]/g, " ");
+  normalized = normalized.replace(/\b(one)\b/g, "1");
+  normalized = normalized.replace(/\b(two)\b/g, "2");
+  normalized = normalized.replace(/\b(three)\b/g, "3");
+  normalized = normalized.replace(/\b(four|for)\b/g, "4");
+  normalized = normalized.replace(/\b(five)\b/g, "5");
+  normalized = normalized.replace(/\b(six)\b/g, "6");
+  normalized = normalized.replace(/\b(seven)\b/g, "7");
+  normalized = normalized.replace(/\b(eight|ate)\b/g, "8");
+  normalized = normalized.replace(/\s+/g, " ").trim();
+  return normalized;
+}
+
+function extractMove(normalizedText) {
+  if (!normalizedText) return null;
+  const compact = normalizedText.replace(/\b([a-h])\s*([1-8])\b/g, "$1$2");
+  const moveMatch = compact.match(/\b([a-h][1-8])\s*(?:to|-)?\s*([a-h][1-8])\b/);
+  if (!moveMatch) return null;
+  return { from: moveMatch[1], to: moveMatch[2] };
 }
 
 // --- Local Whisper Server ---
@@ -62,15 +86,23 @@ recordBtn.onclick = async () => {
         speechOutput.textContent = `You said: "${transcript}"`;
         speechOutput.style.color = "#28a745";
 
-        const normalized = transcript.trim().toLowerCase();
+        const normalized = normalizeTranscript(transcript);
+        const moveData = extractMove(normalized);
         let matched = false;
-        for (const cmd in commandHandlers) {
-          if (normalized.includes(cmd)) {
-            commandHandlers[cmd]();
-            matched = true;
-            break;
+
+        if (moveData && commandHandlers.move) {
+          commandHandlers.move(moveData, transcript);
+          matched = true;
+        } else {
+          for (const cmd in commandHandlers) {
+            if (normalized.includes(cmd)) {
+              commandHandlers[cmd](null, transcript);
+              matched = true;
+              break;
+            }
           }
         }
+
         if (!matched) {
           speechOutput.textContent = `"${transcript}" — command not recognized`;
           speechOutput.style.color = "#dc3545";
