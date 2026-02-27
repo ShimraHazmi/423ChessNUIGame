@@ -1,5 +1,4 @@
-// speech.js - handles voice commands via OpenAI Whisper API
-import { OPENAI_API_KEY } from "./config.js";
+// speech.js - handles voice commands via local Whisper server
 
 // DOM elements
 const recordBtn = document.getElementById("recordBtn");
@@ -14,28 +13,28 @@ export function onVoiceCommand(command, handler) {
   commandHandlers[command] = handler;
 }
 
-// --- Whisper API ---
-const WHISPER_API_URL = "https://api.openai.com/v1/audio/transcriptions";
+// --- Local Whisper Server ---
+const WHISPER_API_URL = "http://localhost:5000/transcribe";
 
 async function transcribeWithWhisper(audioBlob) {
   const formData = new FormData();
   formData.append("file", audioBlob, "audio.webm");
-  formData.append("model", "whisper-1");
 
   try {
     const response = await fetch(WHISPER_API_URL, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${OPENAI_API_KEY}` },
       body: formData
     });
     if (!response.ok) {
-      throw new Error("Whisper API error: " + response.status);
+      const errBody = await response.json().catch(() => ({}));
+      const msg = errBody?.error?.message || response.statusText;
+      throw new Error(`Whisper API error ${response.status}: ${msg}`);
     }
     const result = await response.json();
     return result.text;
   } catch (error) {
-    console.error(error);
-    return null;
+    console.error("Transcription error:", error);
+    return { error: error.message };
   }
 }
 
@@ -59,7 +58,7 @@ recordBtn.onclick = async () => {
       speechOutput.style.color = "#667eea";
 
       const transcript = await transcribeWithWhisper(audioBlob);
-      if (transcript) {
+      if (transcript && typeof transcript === "string") {
         speechOutput.textContent = `You said: "${transcript}"`;
         speechOutput.style.color = "#28a745";
 
@@ -76,6 +75,9 @@ recordBtn.onclick = async () => {
           speechOutput.textContent = `"${transcript}" — command not recognized`;
           speechOutput.style.color = "#dc3545";
         }
+      } else if (transcript && transcript.error) {
+        speechOutput.textContent = `Transcription failed: ${transcript.error}`;
+        speechOutput.style.color = "#dc3545";
       } else {
         speechOutput.textContent = "Transcription failed. Try again.";
         speechOutput.style.color = "#dc3545";
