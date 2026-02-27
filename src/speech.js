@@ -1,7 +1,4 @@
-// speech.js - handles voice commands via OpenAI Whisper API
-import { OPENAI_API_KEY } from "./config.js";
-
-// DOM elements
+// speech.js
 const recordBtn = document.getElementById("recordBtn");
 const stopBtn = document.getElementById("stopBtn");
 const speechOutput = document.getElementById("speechOutput");
@@ -46,7 +43,9 @@ let audioChunks = [];
 recordBtn.onclick = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
+
+    const options = { mimeType: "audio/webm;codecs=opus" };
+    mediaRecorder = new MediaRecorder(stream, options);
     audioChunks = [];
 
     mediaRecorder.ondataavailable = (event) => {
@@ -55,34 +54,36 @@ recordBtn.onclick = async () => {
 
     mediaRecorder.onstop = async () => {
       const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+
       speechOutput.textContent = "Transcribing...";
       speechOutput.style.color = "#667eea";
 
-      const transcript = await transcribeWithWhisper(audioBlob);
-      if (transcript) {
-        speechOutput.textContent = `You said: "${transcript}"`;
-        speechOutput.style.color = "#28a745";
+      try {
+        const formData = new FormData();
+        formData.append("file", audioBlob, "audio.webm");
 
-        const normalized = transcript.trim().toLowerCase();
-        let matched = false;
-        for (const cmd in commandHandlers) {
-          if (normalized.includes(cmd)) {
-            commandHandlers[cmd]();
-            matched = true;
-            break;
-          }
+        const response = await fetch("http://localhost:3000/api/transcribe", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const err = await response.text();
+          throw new Error(err);
         }
-        if (!matched) {
-          speechOutput.textContent = `"${transcript}" — command not recognized`;
-          speechOutput.style.color = "#dc3545";
-        }
-      } else {
-        speechOutput.textContent = "Transcription failed. Try again.";
+
+        const data = await response.json();
+        speechOutput.textContent = `You said: "${data.text}"`;
+        speechOutput.style.color = "#28a745";
+      } catch (err) {
+        console.error("Transcription error:", err);
+        speechOutput.textContent = "Transcription failed.";
         speechOutput.style.color = "#dc3545";
       }
 
-      // Stop all mic tracks
-      stream.getTracks().forEach(t => t.stop());
+      stream.getTracks().forEach((t) => t.stop());
+      recordBtn.disabled = false;
+      stopBtn.disabled = true;
     };
 
     mediaRecorder.start();
@@ -90,8 +91,9 @@ recordBtn.onclick = async () => {
     speechOutput.style.color = "#667eea";
     recordBtn.disabled = true;
     stopBtn.disabled = false;
-  } catch (error) {
-    speechOutput.textContent = "Mic permission denied. Please allow microphone access.";
+  } catch (err) {
+    console.error("getUserMedia error:", err);
+    speechOutput.textContent = "Mic access denied.";
     speechOutput.style.color = "#dc3545";
   }
 };
