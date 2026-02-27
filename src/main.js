@@ -213,26 +213,68 @@ onVoiceCommand('reset', function() {
   updateStatus()
 })
 
-onVoiceCommand('move', function(moveData) {
-  if (!moveData || !moveData.from || !moveData.to) {
-    $status.html('Could not parse move. Say like "A2 to A3".')
+// Handle chess moves from voice commands
+onVoiceCommand('move', function(moveData, transcript) {
+  // Check if game is over
+  if (game.game_over()) {
+    $status.html('Game over! Cannot make moves.')
+    $status.css('color', '#dc3545')
+    setTimeout(() => $status.css('color', '#333'), 3000)
     return
   }
 
-  const move = game.move({
-    from: moveData.from,
-    to: moveData.to,
-    promotion: 'q'
-  })
+  let move = null
 
-  if (!move) {
-    $status.html(`Illegal move: ${moveData.from} to ${moveData.to}`)
-    return
+  // Try to make the move based on what was parsed
+  if (moveData.from && moveData.to) {
+    // Direct move: e2 to e4
+    move = game.move({
+      from: moveData.from,
+      to: moveData.to,
+      promotion: 'q' // auto-promote to queen
+    })
+  } else if (moveData.piece && moveData.to) {
+    // Piece-based move: knight to f3
+    // Get all legal moves for the current player
+    const moves = game.moves({ verbose: true })
+    const targetSquare = moveData.to
+    
+    // Find matching move for the specified piece type
+    const matchingMoves = moves.filter(m => 
+      m.piece === moveData.piece && m.to === targetSquare
+    )
+    
+    if (matchingMoves.length === 1) {
+      // Unambiguous move
+      move = game.move({
+        from: matchingMoves[0].from,
+        to: matchingMoves[0].to,
+        promotion: 'q'
+      })
+    } else if (matchingMoves.length > 1) {
+      $status.html(`Ambiguous move! Multiple ${moveData.piece} pieces can move to ${targetSquare}. Please specify the starting square.`)
+      $status.css('color', '#ffa500')
+      setTimeout(() => $status.css('color', '#333'), 4000)
+      return
+    }
   }
 
-  board.position(game.fen())
-  switchClock()
-  updateStatus()
+  if (move) {
+    // Valid move executed
+    board.position(game.fen())
+    switchClock()
+    updateStatus()
+    $status.css('color', '#28a745')
+    setTimeout(() => $status.css('color', '#333'), 2000)
+  } else {
+    // Invalid move
+    $status.html(`Illegal move: "${transcript}" - Try again!`)
+    $status.css('color', '#dc3545')
+    setTimeout(() => {
+      updateStatus()
+      $status.css('color', '#333')
+    }, 3000)
+  }
 })
 
 // Menu button functionality
