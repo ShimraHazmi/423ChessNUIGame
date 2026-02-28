@@ -204,6 +204,15 @@ onVoiceCommand('clear', function() {
 onVoiceCommand('pause', pauseTimer)
 onVoiceCommand('resume', resumeTimer)
 
+// Open main menu on voice command
+onVoiceCommand('menu', function() {
+  menuPopup.classList.remove('hidden')
+})
+
+onVoiceCommand('settings', function() {
+  menuPopup.classList.remove('hidden')
+})
+
 onVoiceCommand('reset', function() {
   game.reset()
   board.start()
