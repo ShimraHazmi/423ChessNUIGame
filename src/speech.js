@@ -2,7 +2,6 @@
 
 // DOM elements
 const recordBtn = document.getElementById("recordBtn");
-const stopBtn = document.getElementById("stopBtn");
 const speechOutput = document.getElementById("speechOutput");
 
 // stores command callbacks that main.js registers
@@ -65,38 +64,62 @@ async function transcribeWithWhisper(audioBlob) {
 // --- MediaRecorder setup ---
 let mediaRecorder;
 let audioChunks = [];
+let recognition; // Web Speech API for real-time "confirm" detection
+let isRecording = false;
+
+// Initialize Web Speech API
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+}
 
 recordBtn.onclick = async () => {
+  if (isRecording) return; // Prevent multiple recordings
+  
+  if (!SpeechRecognition) {
+    speechOutput.textContent = "Speech recognition not supported in this browser.";
+    speechOutput.style.color = "#dc3545";
+    return;
+  }
+
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mediaRecorder = new MediaRecorder(stream);
     audioChunks = [];
+    isRecording = true;
 
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) audioChunks.push(event.data);
     };
 
     mediaRecorder.onstop = async () => {
+      isRecording = false;
       const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
       speechOutput.textContent = "Transcribing...";
       speechOutput.style.color = "#667eea";
 
       const transcript = await transcribeWithWhisper(audioBlob);
       if (transcript && typeof transcript === "string") {
-        speechOutput.textContent = `You said: "${transcript}"`;
+        // Remove "confirm" from the transcript
+        const cleanedTranscript = transcript.replace(/\bconfirm\b/gi, "").trim();
+        
+        speechOutput.textContent = `You said: "${cleanedTranscript}"`;
         speechOutput.style.color = "#28a745";
 
-        const normalized = normalizeTranscript(transcript);
+        const normalized = normalizeTranscript(cleanedTranscript);
         const moveData = extractMove(normalized);
         let matched = false;
 
         if (moveData && commandHandlers.move) {
-          commandHandlers.move(moveData, transcript);
+          commandHandlers.move(moveData, cleanedTranscript);
           matched = true;
         } else {
           for (const cmd in commandHandlers) {
             if (normalized.includes(cmd)) {
-              commandHandlers[cmd](null, transcript);
+              commandHandlers[cmd](null, cleanedTranscript);
               matched = true;
               break;
             }
@@ -104,7 +127,7 @@ recordBtn.onclick = async () => {
         }
 
         if (!matched) {
-          speechOutput.textContent = `"${transcript}" — command not recognized`;
+          speechOutput.textContent = `"${cleanedTranscript}" — command not recognized`;
           speechOutput.style.color = "#dc3545";
         }
       } else if (transcript && transcript.error) {
@@ -117,23 +140,77 @@ recordBtn.onclick = async () => {
 
       // Stop all mic tracks
       stream.getTracks().forEach(t => t.stop());
+      recordBtn.disabled = false;
     };
 
+    // Start recording with MediaRecorder
     mediaRecorder.start();
-    speechOutput.textContent = "🎤 Recording...";
+    
+    // Start Web Speech API for real-time "confirm" detection
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript.toLowerCase();
+        if (event.results[i].isFinal) {
+          // Check for "confirm" in final results
+          if (transcript.includes('confirm')) {
+            stopRecording();
+            return;
+          }
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      
+      // Check interim results for "confirm" too
+      if (interimTranscript.includes('confirm')) {
+        stopRecording();
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      // Don't stop recording on recognition errors, just log them
+    };
+
+    recognition.onend = () => {
+      // Auto-restart recognition if still recording (unless we stopped intentionally)
+      if (isRecording && mediaRecorder && mediaRecorder.state === "recording") {
+        try {
+          recognition.start();
+        } catch (e) {
+          console.error('Failed to restart recognition:', e);
+        }
+      }
+    };
+
+    recognition.start();
+
+    speechOutput.textContent = "🎤 Recording... Say 'confirm' when done.";
     speechOutput.style.color = "#667eea";
     recordBtn.disabled = true;
-    stopBtn.disabled = false;
+
   } catch (error) {
+    isRecording = false;
     speechOutput.textContent = "Mic permission denied. Please allow microphone access.";
     speechOutput.style.color = "#dc3545";
+    recordBtn.disabled = false;
   }
 };
 
-stopBtn.onclick = () => {
+function stopRecording() {
   if (mediaRecorder && mediaRecorder.state === "recording") {
+    isRecording = false;
     mediaRecorder.stop();
-    recordBtn.disabled = false;
-    stopBtn.disabled = true;
+    
+    // Stop speech recognition
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (e) {
+        console.error('Error stopping recognition:', e);
+      }
+    }
   }
-};
+}

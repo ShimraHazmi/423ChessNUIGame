@@ -331,7 +331,28 @@ body {
 }
 
 .voice-commands-list li::before {
-    content: "🎤 ";
+    content: "* ";
+}
+
+.voice-commands-list .info-text {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #fff3cd;
+    border-radius: 6px;
+    border-left: 3px solid #ffc107;
+    font-size: 13px;
+    color: #856404;
+}
+
+.info-badge {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 6px;
 }
 
 /* --------------------------------------------------------*/
