@@ -163,7 +163,82 @@ var config = {
 board = Chessboard('board', config)  // 'board' matches your HTML div id
 
 updateStatus()
+//I will fix it later surely, just overlay the analysis bar and stuffs. Yep. Do it surely.
+function getHint() {
+    console.log('getHint() called');
+    
+    if (game.game_over()) {
+        $status.html('Game is over');
+        return;
+    }
+    
+    $status.html('🤔 Thinking...');
+    $status.css('color', '#667eea');
+    
+    // Small delay to show thinking message
+    setTimeout(() => {
+        const possibleMoves = game.moves({ verbose: true });
+        
+        if (possibleMoves.length === 0) {
+            $status.html('No moves available');
+            return;
+        }
+        
+        // Simple AI strategy
+        let bestMove = null;
+        
+        // 1. Look for captures first
+        for (let move of possibleMoves) {
+            if (move.captured) {
+                bestMove = move;
+                break;
+            }
+        }
+        
+        // 2. If no captures, prefer center control (e4, d4, e5, d5)
+        if (!bestMove) {
+            const centerSquares = ['e4', 'd4', 'e5', 'd5'];
+            for (let move of possibleMoves) {
+                if (centerSquares.includes(move.to)) {
+                    bestMove = move;
+                    break;
+                }
+            }
+        }
+        
+        // 3. Otherwise, just pick a random move
+        if (!bestMove) {
+            bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+        }
+        
+        displayHint(bestMove.from + bestMove.to);
+    }, 500);
+}
 
+function displayHint(move) {
+    const from = move.substring(0, 2);
+    const to = move.substring(2, 4);
+    
+    const moveColor = game.turn() === 'w' ? 'White' : 'Black';
+    const hint = `💡 Hint for ${moveColor}: Try moving from ${from} to ${to}`;
+    
+    $status.html(hint);
+    $status.css('color', '#007bff');
+    
+    highlightHintSquares(from, to);
+    
+    setTimeout(() => {
+        updateStatus();
+        $('.square-55d63').removeClass('hint-from hint-to');
+        $status.css('color', '#333');
+    }, 5000);
+}
+
+function highlightHintSquares(from, to) {
+    $('.square-55d63').removeClass('hint-from hint-to');
+    $('.square-' + from).addClass('hint-from');
+    $('.square-' + to).addClass('hint-to');
+}
 // Wire up your Start and Clear buttons
 $('.start-btn').on('click', function() {
   game.reset()
@@ -223,6 +298,14 @@ onVoiceCommand('reset', function() {
 })
 
 // Handle chess moves from voice commands
+onVoiceCommand('wow', function() {
+  if (game.game_over()) {
+    $status.html('No game in progress.')
+    $status.css('color', '#dc3545')
+    return
+  }
+  getHint()
+})
 onVoiceCommand('move', function(moveData, transcript) {
   // Check if game is over
   if (game.game_over()) {
