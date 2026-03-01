@@ -17,30 +17,29 @@
     <div class="layout">
       <div class="panel">
         <h1>🖐️ Speech Controlled Chess Game </h1>
-        <p class="subtitle">A chess game controlled by voice commands duhhh</p>
+        <p class="subtitle">A chess game controlled by voice commands!</p>
 
         <div class="button-group">
-          <button id="speechBtn" class="nav-btn">🎤 Speech</button>
+          <button id="speechBtn" class="nav-btn">Access Speech Here</button>
         </div>
 
         <!-- SPEECH -->
         <div id="speechSection" class="section">
-          <p><span class="info-badge">Voice Input</span> Use your voice to control the game</p>
           <div class="record-btns">
-            <button id="recordBtn">🎤 Start Recording</button>
-            <button id="stopBtn" disabled>⏹ Stop Recording</button>
+            <button id="recordBtn">Start Recording</button>
           </div>
-          <div id="speechOutput">Say a command...</div>
+          <div id="speechOutput">Say a command and end with "confirm"...</div>
           <div class="voice-commands-list">
             <p><strong>Available commands:</strong></p>
             <ul>
-              <li>"Start game" – start the game &amp; timer</li>
-              <li>"Clear board" – clear all pieces</li>
-              <li>"Pause" – pause the timer</li>
-              <li>"Resume" – resume the timer</li>
-              <li>"Reset" – reset the game &amp; timer</li>
-              <li>"Wow" (fix when gets audio gets better) – get a hint for the best move</li>
+              <li>"Start game confirm" – start the game &amp; timer</li>
+              <li>"Clear board confirm" – clear all pieces</li>
+              <li>"Pause confirm" – pause the timer</li>
+              <li>"Resume confirm" – resume the timer</li>
+              <li>"Reset confirm" – reset the game &amp; timer</li>
+              <li>"E2 to E4 confirm" – move a piece (say "confirm" to finish)</li>
             </ul>
+            <p class="info-text">Say "confirm" at the end of your command to stop recording</p>
           </div>
         </div>
       </div>
