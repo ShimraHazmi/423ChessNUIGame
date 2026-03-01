@@ -163,7 +163,7 @@ var config = {
 board = Chessboard('board', config)  // 'board' matches your HTML div id
 
 updateStatus()
-//I will fix it later surely, just overlay the analysis bar and stuffs. Yep. Do it surely.
+//I will fix it later with stockfish script but none of them work!!!
 function getHint() {
     console.log('getHint() called');
     
