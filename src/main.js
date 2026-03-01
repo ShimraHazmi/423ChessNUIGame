@@ -172,7 +172,7 @@ function getHint() {
         return;
     }
     
-    $status.html('🤔 Thinking...');
+    $status.html('Thinking...');
     $status.css('color', '#667eea');
 
     setTimeout(() => {
