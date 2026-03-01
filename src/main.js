@@ -305,6 +305,33 @@ onVoiceCommand('wow', function() {
   }
   getHint()
 })
+  onVoiceCommand('resign', function() {
+    if (game.game_over()) {
+        $status.html('Game is already over');
+        return;
+    }
+    
+    // Determine who resigned
+    let loser;
+    let winner;
+    
+    if (game.turn() === 'w') {
+        loser = 'White';
+        winner = 'Black';
+    } else {
+        loser = 'Black';
+        winner = 'White';
+    }
+    
+    $status.html(`${loser} resigns. ${winner} wins!`);
+    
+
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+  
+});
 onVoiceCommand('move', function(moveData, transcript) {
   // Check if game is over
   if (game.game_over()) {
