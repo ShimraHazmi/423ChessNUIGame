@@ -174,8 +174,7 @@ function getHint() {
     
     $status.html('🤔 Thinking...');
     $status.css('color', '#667eea');
-    
-    // Small delay to show thinking message
+
     setTimeout(() => {
         const possibleMoves = game.moves({ verbose: true });
         
@@ -184,10 +183,10 @@ function getHint() {
             return;
         }
         
-        // Simple AI strategy
+
         let bestMove = null;
         
-        // 1. Look for captures first
+
         for (let move of possibleMoves) {
             if (move.captured) {
                 bestMove = move;
@@ -195,7 +194,7 @@ function getHint() {
             }
         }
         
-        // 2. If no captures, prefer center control (e4, d4, e5, d5)
+
         if (!bestMove) {
             const centerSquares = ['e4', 'd4', 'e5', 'd5'];
             for (let move of possibleMoves) {
@@ -206,7 +205,7 @@ function getHint() {
             }
         }
         
-        // 3. Otherwise, just pick a random move
+
         if (!bestMove) {
             bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
         }
