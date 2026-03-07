@@ -125,8 +125,10 @@ if (SpeechRecognition) {
   recognition.lang = 'en-US';
 }
 
-recordBtn.onclick = async () => {
-  if (isRecording) return; // Prevent multiple recordings
+let autoListenEnabled = false;
+
+async function startRecording() {
+  if (isRecording) return;
   
   if (!SpeechRecognition) {
     speechOutput.textContent = "Speech recognition not supported in this browser.";
@@ -190,6 +192,11 @@ recordBtn.onclick = async () => {
       // Stop all mic tracks
       stream.getTracks().forEach(t => t.stop());
       recordBtn.disabled = false;
+
+      // Auto-restart recording after processing
+      if (autoListenEnabled) {
+        setTimeout(() => startRecording(), 500);
+      }
     };
 
     // Start recording with MediaRecorder
@@ -242,10 +249,16 @@ recordBtn.onclick = async () => {
 
   } catch (error) {
     isRecording = false;
+    autoListenEnabled = false;
     speechOutput.textContent = "Mic permission denied. Please allow microphone access.";
     speechOutput.style.color = "#dc3545";
     recordBtn.disabled = false;
   }
+}
+
+recordBtn.onclick = async () => {
+  autoListenEnabled = true;
+  startRecording();
 };
 
 function stopRecording() {
