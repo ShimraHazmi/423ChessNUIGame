@@ -13,7 +13,7 @@ settings.configure(
 )
 
 print("Loading Whisper model...")
-model = whisper.load_model("base")  # change to "tiny" for faster startup
+model = whisper.load_model("base")  # "tiny", "base", "small", "medium", "large", "large-v2"
 print("Whisper model ready.")
 
 @csrf_exempt

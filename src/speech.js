@@ -30,10 +30,59 @@ function normalizeTranscript(text) {
 
 function extractMove(normalizedText) {
   if (!normalizedText) return null;
+  
+  console.log('Parsing:', normalizedText);
+  
+  //common special moves
+  if (normalizedText.includes('castle king') || normalizedText.includes('castle short') || normalizedText.includes('kingside castle')) {
+    return { special: 'O-O' };
+  }
+  if (normalizedText.includes('castle queen') || normalizedText.includes('castle long') || normalizedText.includes('queenside castle')) {
+    return { special: 'O-O-O' };
+  }
+  
+  const pieceMap = {
+    'pawn': 'p',
+    'knight': 'n',
+    'bishop': 'b',
+    'rook': 'r',
+    'queen': 'q',
+    'king': 'k'
+  };
+  
+  // Extract piece type from text
+  let pieceType = null;
+  for (const [name, code] of Object.entries(pieceMap)) {
+    if (normalizedText.includes(name)) {
+      pieceType = code;
+      break;
+    }
+  }
+  
+  //exact source to dest
   const compact = normalizedText.replace(/\b([a-h])\s*([1-8])\b/g, "$1$2");
-  const moveMatch = compact.match(/\b([a-h][1-8])\s*(?:to|-)?\s*([a-h][1-8])\b/);
-  if (!moveMatch) return null;
-  return { from: moveMatch[1], to: moveMatch[2] };
+  const squareMatch = compact.match(/\b([a-h][1-8])\b/);
+  
+  if (!squareMatch) {
+
+    const oldFormat = compact.match(/\b([a-h][1-8])\s*(?:to|-)?\s*([a-h][1-8])\b/);
+    if (oldFormat) {
+      return { from: oldFormat[1], to: oldFormat[2] };
+    }
+    return null;
+  }
+  
+  const targetSquare = squareMatch[1];
+  
+
+  const isCapture = normalizedText.includes('take') || normalizedText.includes('capture');
+  
+  // Return in format the handler can process
+  return {
+    piece: pieceType,
+    to: targetSquare,
+    capture: isCapture
+  };
 }
 
 // --- Local Whisper Server ---

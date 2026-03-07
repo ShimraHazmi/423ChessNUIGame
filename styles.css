@@ -208,6 +208,14 @@ canvas {
     padding: 12px;
     border: none;
 }
+
+.start-btn:hover {
+    background: #1a8a24;
+}
+
+.clear-btn:hover {
+    background: #a71d2a;
+}
  /* --------------------------------------------------------*/
 
 
