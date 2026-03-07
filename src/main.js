@@ -163,80 +163,99 @@ var config = {
 board = Chessboard('board', config)  // 'board' matches your HTML div id
 
 updateStatus()
-//I will fix it later with stockfish script but none of them work!!!
-function getHint() {
-    console.log('getHint() called');
+
+async function getHint() {
+    const panel = document.getElementById('analysisPanel');
+    const evalBarWhite = document.querySelector('.eval-bar-white');
+    const evalBarBlack = document.querySelector('.eval-bar-black');
+    const evalScore = document.querySelector('.eval-score');
+    const move1 = document.getElementById('move1');
+    const move2 = document.getElementById('move2');
+    const move3 = document.getElementById('move3');
     
     if (game.game_over()) {
-        $status.html('Game is over');
+        $status.html('Game is already over');
         return;
     }
     
-    $status.html('Thinking...');
-    $status.css('color', '#667eea');
-
-    setTimeout(() => {
-        const possibleMoves = game.moves({ verbose: true });
+    // Show panel
+    panel.classList.remove('hidden');
+    evalScore.textContent = '...';
+    move1.innerHTML = '';
+    move2.innerHTML = '';
+    move3.innerHTML = '';
+    
+    try {
+        const fen = game.fen();
+        const response = await fetch(`https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=3`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        });
         
-        if (possibleMoves.length === 0) {
-            $status.html('No moves available');
-            return;
-        }
+        if (!response.ok) throw new Error('API failed');
         
-
-        let bestMove = null;
+        const data = await response.json();
         
-
-        for (let move of possibleMoves) {
-            if (move.captured) {
-                bestMove = move;
-                break;
-            }
-        }
-        
-
-        if (!bestMove) {
-            const centerSquares = ['e4', 'd4', 'e5', 'd5'];
-            for (let move of possibleMoves) {
-                if (centerSquares.includes(move.to)) {
-                    bestMove = move;
-                    break;
+        if (data.pvs && data.pvs.length > 0) {
+            // Update evaluation bar
+            const cp = data.pvs[0].cp || 0;
+            const pawns = (cp / 100).toFixed(1);
+            
+            // Convert to percentage for bar (capped at ±5 pawns)
+            const cappedPawns = Math.max(-5, Math.min(5, cp / 100));
+            const percentage = 50 + (cappedPawns / 5) * 50;
+            
+            evalBarWhite.style.flex = percentage;
+            evalBarBlack.style.flex = 100 - percentage;
+            evalScore.textContent = cp > 0 ? `+${pawns}` : pawns;
+            
+            // Display top moves
+            const moveElements = [move1, move2, move3];
+            
+            data.pvs.forEach((pv, index) => {
+                if (index < 3 && pv.moves) {
+                    const moveUCI = pv.moves.split(' ')[0];
+                    const moveSAN = convertUCItoSAN(moveUCI);
+                    const moveCP = pv.cp !== undefined ? pv.cp : 0;
+                    const movePawns = (moveCP / 100).toFixed(1);
+                    
+                    moveElements[index].innerHTML = `
+                        <span class="move-notation">${index + 1}. ${moveSAN}</span>
+                        <span class="move-eval">${moveCP > 0 ? '+' : ''}${movePawns}</span>
+                    `;
                 }
-            }
+            });
+            
+        } else {
+            evalScore.textContent = '?';
+            move1.innerHTML = 'No analysis available';
         }
         
-
-        if (!bestMove) {
-            bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-        }
-        
-        displayHint(bestMove.from + bestMove.to);
-    }, 500);
+    } catch (error) {
+        console.error('Analysis error:', error);
+        evalScore.textContent = 'Error';
+        move1.innerHTML = 'Analysis failed';
+    }
 }
 
-function displayHint(move) {
-    const from = move.substring(0, 2);
-    const to = move.substring(2, 4);
+// Convert UCI notation (e2e4) to readable notation (e4)
+function convertUCItoSAN(uci) {
+    const from = uci.substring(0, 2);
+    const to = uci.substring(2, 4);
+    const piece = game.get(from);
     
-    const moveColor = game.turn() === 'w' ? 'White' : 'Black';
-    const hint = `💡 Hint for ${moveColor}: Try moving from ${from} to ${to}`;
+    if (!piece) return uci;
     
-    $status.html(hint);
-    $status.css('color', '#007bff');
+    const pieceSymbols = {
+        'p': '',
+        'n': 'N',
+        'b': 'B',
+        'r': 'R',
+        'q': 'Q',
+        'k': 'K'
+    };
     
-    highlightHintSquares(from, to);
-    
-    setTimeout(() => {
-        updateStatus();
-        $('.square-55d63').removeClass('hint-from hint-to');
-        $status.css('color', '#333');
-    }, 5000);
-}
-
-function highlightHintSquares(from, to) {
-    $('.square-55d63').removeClass('hint-from hint-to');
-    $('.square-' + from).addClass('hint-from');
-    $('.square-' + to).addClass('hint-to');
+    return pieceSymbols[piece.type] + to;
 }
 // Wire up your Start and Clear buttons
 $('.start-btn').on('click', function() {
@@ -296,7 +315,6 @@ onVoiceCommand('reset', function() {
   updateStatus()
 })
 
-// Handle chess moves from voice commands
 onVoiceCommand('wow', function() {
   if (game.game_over()) {
     $status.html('No game in progress.')
@@ -305,7 +323,8 @@ onVoiceCommand('wow', function() {
   }
   getHint()
 })
-  onVoiceCommand('resign', function() {
+
+onVoiceCommand('resign', function() {
     if (game.game_over()) {
         $status.html('Game is already over');
         return;
@@ -325,13 +344,13 @@ onVoiceCommand('wow', function() {
     
     $status.html(`${loser} resigns. ${winner} wins!`);
     
-
     if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
     }
-  
-});
+})
+
+// Handle chess moves from voice commands
 onVoiceCommand('move', function(moveData, transcript) {
   // Check if game is over
   if (game.game_over()) {
