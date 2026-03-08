@@ -229,6 +229,13 @@ canvas {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+/* Make board letters and numbers size bigger and color black for visibility */
+.notation-322f9 {
+    font-size: 18px !important;
+    font-weight: bold !important;
+    color: #000 !important;
+}
+
 /* --------------------------------------------------------*/
 
 /* Background image with dimming */
@@ -463,6 +470,113 @@ body {
 
 .hint-to {
     box-shadow: inset 0 0 15px 5px rgba(0, 255, 0, 0.6) !important;
+}
+
+/* --------------------------------------------------------*/
+
+/* Winning Screen Popup */
+
+.winning-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: popupFadeIn 0.3s ease;
+}
+
+.winning-popup.hidden {
+    display: none;
+}
+
+@keyframes popupFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.winning-content {
+    background: white;
+    padding: 48px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    max-width: 500px;
+    animation: popupFadeIn 0.4s ease;
+}
+
+@keyframes popupSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+.winning-title {
+    font-size: 36px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.winning-message {
+    font-size: 24px;
+    color: #666;
+    margin-bottom: 32px;
+}
+
+.winning-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.play-again-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.play-again-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+.close-popup-btn {
+    background: #e0e0e0;
+    color: #333;
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.close-popup-btn:hover {
+    background: #d0d0d0;
+    transform: translateY(-2px);
 }
 
 /* --------------------------------------------------------*/

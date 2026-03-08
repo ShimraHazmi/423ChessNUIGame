@@ -129,11 +129,17 @@ function updateStatus () {
   // checkmate?
   if (game.in_checkmate()) {
     status = 'Game over, ' + moveColor + ' is in checkmate.'
+    // Show winning screen
+    const winner = moveColor === 'White' ? 'Black' : 'White'
+    showWinningModal(winner, 'checkmate')
+    pauseTimer()
   }
 
   // draw?
   else if (game.in_draw()) {
     status = 'Game over, drawn position'
+    showWinningModal(null, 'draw')
+    pauseTimer()
   }
 
   // game still on
@@ -445,6 +451,46 @@ resetMenuBtn.addEventListener('click', function() {
   startTimer()
   updateStatus()
   menuPopup.classList.add('hidden')
+})
+
+// Winning modal functionality
+const winningModal = document.getElementById('winningModal')
+const winningIcon = document.getElementById('winningIcon')
+const winningTitle = document.getElementById('winningTitle')
+const winningMessage = document.getElementById('winningMessage')
+const playAgainBtn = document.getElementById('playAgainBtn')
+const closeModalBtn = document.getElementById('closeModalBtn')
+
+function showWinningModal(winner, type) {
+  if (type === 'checkmate') {
+    winningTitle.textContent = 'Checkmate!'
+    winningMessage.textContent = `${winner} wins!`
+  } else if (type === 'draw') {
+    winningTitle.textContent = 'Draw!'
+    winningMessage.textContent = 'The game is a draw'
+  }
+  
+  winningModal.classList.remove('hidden')
+}
+
+function hideWinningModal() {
+  winningModal.classList.add('hidden')
+}
+
+// Play Again button - resets the game
+playAgainBtn.addEventListener('click', function() {
+  hideWinningModal()
+  game.reset()
+  board.start()
+  resetTimer()
+  timerContainer.classList.remove('hidden')
+  startTimer()
+  updateStatus()
+})
+
+// Close button - just closes the modal
+closeModalBtn.addEventListener('click', function() {
+  hideWinningModal()
 })
 
 // Export for other modules if needed
