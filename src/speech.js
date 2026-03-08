@@ -33,7 +33,7 @@ function extractMove(normalizedText) {
   
   console.log('Parsing:', normalizedText);
   
-  //common special moves
+  // Special moves - Castling
   if (normalizedText.includes('castle king') || normalizedText.includes('castle short') || normalizedText.includes('kingside castle')) {
     return { special: 'O-O' };
   }
@@ -41,9 +41,10 @@ function extractMove(normalizedText) {
     return { special: 'O-O-O' };
   }
   
+  // Piece names mapping (NO PAWN - we'll infer it)
   const pieceMap = {
-    'pawn': 'p',
     'knight': 'n',
+    'night': 'n',    // Common mishearing
     'bishop': 'b',
     'rook': 'r',
     'queen': 'q',
@@ -59,27 +60,39 @@ function extractMove(normalizedText) {
     }
   }
   
-  //exact source to dest
+  // Normalize spaces around numbers and letters for square detection
   const compact = normalizedText.replace(/\b([a-h])\s*([1-8])\b/g, "$1$2");
-  const squareMatch = compact.match(/\b([a-h][1-8])\b/);
   
+  // Try format: "a2 to a3" or "e2 to e4"
+  const explicitMove = compact.match(/\b([a-h][1-8])\s*(?:to|2|too)\s*([a-h][1-8])\b/);
+  if (explicitMove) {
+    return { from: explicitMove[1], to: explicitMove[2] };
+  }
+  
+  // Check for pawn capture: "a takes b5" or "e takes d4"
+  const pawnCapture = compact.match(/\b([a-h])\s*(?:take|capture)s?\s*([a-h][1-8])\b/);
+  if (pawnCapture) {
+    return {
+      piece: 'p',
+      to: pawnCapture[2],
+      capture: true,
+      fromFile: pawnCapture[1]  // Which file the pawn is on
+    };
+  }
+  
+  // Look for destination square: "a3", "e4", "f3"
+  const squareMatch = compact.match(/\b([a-h][1-8])\b/);
   if (!squareMatch) {
-
-    const oldFormat = compact.match(/\b([a-h][1-8])\s*(?:to|-)?\s*([a-h][1-8])\b/);
-    if (oldFormat) {
-      return { from: oldFormat[1], to: oldFormat[2] };
-    }
     return null;
   }
   
   const targetSquare = squareMatch[1];
   
-
+  // Check if it's a capture (for pieces other than pawns)
   const isCapture = normalizedText.includes('take') || normalizedText.includes('capture');
   
-  // Return in format the handler can process
   return {
-    piece: pieceType,
+    piece: pieceType,  // null for pawn moves like "e4"
     to: targetSquare,
     capture: isCapture
   };
