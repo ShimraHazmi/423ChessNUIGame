@@ -165,76 +165,43 @@ board = Chessboard('board', config)  // 'board' matches your HTML div id
 updateStatus()
 
 async function getHint() {
-    const panel = document.getElementById('analysisPanel');
-    const evalBarWhite = document.querySelector('.eval-bar-white');
-    const evalBarBlack = document.querySelector('.eval-bar-black');
-    const evalScore = document.querySelector('.eval-score');
-    const move1 = document.getElementById('move1');
-    const move2 = document.getElementById('move2');
-    const move3 = document.getElementById('move3');
-    
     if (game.game_over()) {
         $status.html('Game is already over');
         return;
     }
     
-    // Show panel
-    panel.classList.remove('hidden');
-    evalScore.textContent = '...';
-    move1.innerHTML = '';
-    move2.innerHTML = '';
-    move3.innerHTML = '';
+    $status.html('Analyzing...');
     
     try {
         const fen = game.fen();
-        const response = await fetch(`https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=3`, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
-        });
-        
-        if (!response.ok) throw new Error('API failed');
-        
+        const response = await fetch(`https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=1`);
         const data = await response.json();
         
-        if (data.pvs && data.pvs.length > 0) {
-            // Update evaluation bar
-            const cp = data.pvs[0].cp || 0;
-            const pawns = (cp / 100).toFixed(1);
+        if (data.pvs && data.pvs[0]) {
+            const moveUCI = data.pvs[0].moves.split(' ')[0];
+            const from = moveUCI.substring(0, 2);
+            const to = moveUCI.substring(2, 4);
+            const eval_cp = data.pvs[0].cp || 0;
+            const eval_pawns = (eval_cp / 100).toFixed(1);
             
-            // Convert to percentage for bar (capped at ±5 pawns)
-            const cappedPawns = Math.max(-5, Math.min(5, cp / 100));
-            const percentage = 50 + (cappedPawns / 5) * 50;
+            const color = game.turn() === 'w' ? 'White' : 'Black';
+            $status.html(`💡 Best move for ${color}: ${from} to ${to} (Eval: ${eval_pawns})`);
             
-            evalBarWhite.style.flex = percentage;
-            evalBarBlack.style.flex = 100 - percentage;
-            evalScore.textContent = cp > 0 ? `+${pawns}` : pawns;
+            // Highlight squares
+            $('.square-55d63').removeClass('hint-from hint-to');
+            $('.square-' + from).addClass('hint-from');
+            $('.square-' + to).addClass('hint-to');
             
-            // Display top moves
-            const moveElements = [move1, move2, move3];
-            
-            data.pvs.forEach((pv, index) => {
-                if (index < 3 && pv.moves) {
-                    const moveUCI = pv.moves.split(' ')[0];
-                    const moveSAN = convertUCItoSAN(moveUCI);
-                    const moveCP = pv.cp !== undefined ? pv.cp : 0;
-                    const movePawns = (moveCP / 100).toFixed(1);
-                    
-                    moveElements[index].innerHTML = `
-                        <span class="move-notation">${index + 1}. ${moveSAN}</span>
-                        <span class="move-eval">${moveCP > 0 ? '+' : ''}${movePawns}</span>
-                    `;
-                }
-            });
-            
+            setTimeout(() => {
+                $('.square-55d63').removeClass('hint-from hint-to');
+                updateStatus();
+            }, 5000);
         } else {
-            evalScore.textContent = '?';
-            move1.innerHTML = 'No analysis available';
+            $status.html('❌ No analysis available');
         }
-        
     } catch (error) {
-        console.error('Analysis error:', error);
-        evalScore.textContent = 'Error';
-        move1.innerHTML = 'Analysis failed';
+        $status.html('❌ Analysis failed');
+        console.error(error);
     }
 }
 
@@ -352,7 +319,6 @@ onVoiceCommand('resign', function() {
 
 // Handle chess moves from voice commands
 onVoiceCommand('move', function(moveData, transcript) {
-  // Check if game is over
   if (game.game_over()) {
     $status.html('Game over! Cannot make moves.')
     $status.css('color', '#dc3545')
@@ -362,50 +328,74 @@ onVoiceCommand('move', function(moveData, transcript) {
 
   let move = null
 
-  // Try to make the move based on what was parsed
-  if (moveData.from && moveData.to) {
-    // Direct move: e2 to e4
+  // Handle special moves (castling)
+  if (moveData.special) {
+    if (moveData.special === 'O-O') {
+      move = game.move({ from: 'e1', to: 'g1' }) || game.move({ from: 'e8', to: 'g8' })
+    } else if (moveData.special === 'O-O-O') {
+      move = game.move({ from: 'e1', to: 'c1' }) || game.move({ from: 'e8', to: 'c8' })
+    }
+  }
+  // Direct move: "a2 to a3" or "e2 to e4"
+  else if (moveData.from && moveData.to) {
     move = game.move({
       from: moveData.from,
       to: moveData.to,
-      promotion: 'q' // auto-promote to queen
+      promotion: 'q'
     })
-  } else if (moveData.piece && moveData.to) {
-    // Piece-based move: knight to f3
-    // Get all legal moves for the current player
+  }
+  // Handle moves to a square
+  else if (moveData.to) {
     const moves = game.moves({ verbose: true })
     const targetSquare = moveData.to
     
-    // Find matching move for the specified piece type
-    const matchingMoves = moves.filter(m => 
-      m.piece === moveData.piece && m.to === targetSquare
-    )
+    let matchingMoves = moves.filter(m => m.to === targetSquare)
+    
+    // Filter by piece type if specified
+    if (moveData.piece) {
+      matchingMoves = matchingMoves.filter(m => m.piece === moveData.piece)
+    } else {
+      // No piece specified - assume pawn (like "e4" or "a3")
+      matchingMoves = matchingMoves.filter(m => m.piece === 'p')
+    }
+    
+    // For pawn captures with file: "a takes b5"
+    if (moveData.fromFile && moveData.piece === 'p') {
+      matchingMoves = matchingMoves.filter(m => m.from[0] === moveData.fromFile)
+    }
+    
+    // Filter by capture if specified
+    if (moveData.capture) {
+      matchingMoves = matchingMoves.filter(m => m.captured)
+    }
     
     if (matchingMoves.length === 1) {
-      // Unambiguous move
       move = game.move({
         from: matchingMoves[0].from,
         to: matchingMoves[0].to,
         promotion: 'q'
       })
     } else if (matchingMoves.length > 1) {
-      $status.html(`Ambiguous move! Multiple ${moveData.piece} pieces can move to ${targetSquare}. Please specify the starting square.`)
+      $status.html(`Ambiguous! Multiple pieces can move to ${targetSquare}. Be more specific.`)
       $status.css('color', '#ffa500')
       setTimeout(() => $status.css('color', '#333'), 4000)
+      return
+    } else if (matchingMoves.length === 0) {
+      $status.html(`No valid move to ${targetSquare}`)
+      $status.css('color', '#dc3545')
+      setTimeout(() => $status.css('color', '#333'), 3000)
       return
     }
   }
 
   if (move) {
-    // Valid move executed
     board.position(game.fen())
     switchClock()
     updateStatus()
     $status.css('color', '#28a745')
     setTimeout(() => $status.css('color', '#333'), 2000)
   } else {
-    // Invalid move
-    $status.html(`Illegal move: "${transcript}" - Try again!`)
+    $status.html(`Illegal move: "${transcript}"`)
     $status.css('color', '#dc3545')
     setTimeout(() => {
       updateStatus()
