@@ -13,7 +13,7 @@ settings.configure(
 )
 
 print("Loading Whisper model...")
-model = whisper.load_model("base")  # "tiny", "base", "small", "medium", "large", "large-v2"
+model = whisper.load_model("base")
 print("Whisper model ready.")
 
 @csrf_exempt
@@ -27,7 +27,6 @@ def transcribe(request):
         else:
             tmp_path = None
             try:
-                # Save audio to temp file
                 with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
                     for chunk in audio.chunks():
                         tmp.write(chunk)
@@ -38,7 +37,6 @@ def transcribe(request):
                 print(f"Audio file: {tmp_path}")
                 print(f"File size: {file_size} bytes")
                 
-                # Transcribe with Whisper (FP16=False for CPU)
                 result = model.transcribe(tmp_path, fp16=False)
                 
                 print(f"✓ Transcription: '{result['text']}'")
@@ -52,7 +50,6 @@ def transcribe(request):
                 traceback.print_exc()
                 response = JsonResponse({"error": str(e)}, status=500)
             finally:
-                # Cleanup temp file
                 if tmp_path and os.path.exists(tmp_path):
                     try:
                         os.unlink(tmp_path)
@@ -61,7 +58,6 @@ def transcribe(request):
     else:
         response = JsonResponse({"error": "Method not allowed"}, status=405)
 
-    # CORS headers so the browser can call this from localhost:3000
     response["Access-Control-Allow-Origin"] = "*"
     response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
     response["Access-Control-Allow-Headers"] = "Content-Type"
@@ -73,3 +69,10 @@ if __name__ == "__main__":
     sys.argv = ["whisper_server.py", "runserver", "5000", "--noreload"]
     from django.core.management import execute_from_command_line
     execute_from_command_line(sys.argv)
+
+# Credits:
+# OpenAI Whisper - Speech recognition model
+# https://github.com/openai/whisper
+# Radford, A., Kim, J.W., Xu, T., Brockman, G., McLeavey, C., & Sutskever, I. (2022).
+# "Robust Speech Recognition via Large-Scale Weak Supervision."
+# Licensed under MIT License

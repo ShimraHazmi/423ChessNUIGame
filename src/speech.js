@@ -1,13 +1,8 @@
-// speech.js - handles voice commands via local Whisper server
-
-// DOM elements
 const recordBtn = document.getElementById("recordBtn");
 const speechOutput = document.getElementById("speechOutput");
 
-// stores command callbacks that main.js registers
 const commandHandlers = {};
 
-// lets other files register what happens when a command is spoken
 export function onVoiceCommand(command, handler) {
   commandHandlers[command.toLowerCase()] = handler;
 }
@@ -30,28 +25,25 @@ function normalizeTranscript(text) {
 
 function extractMove(normalizedText) {
   if (!normalizedText) return null;
-  
+
   console.log('Parsing:', normalizedText);
-  
-  // Special moves - Castling
+
   if (normalizedText.includes('castle king') || normalizedText.includes('castle short') || normalizedText.includes('kingside castle')) {
     return { special: 'O-O' };
   }
   if (normalizedText.includes('castle queen') || normalizedText.includes('castle long') || normalizedText.includes('queenside castle')) {
     return { special: 'O-O-O' };
   }
-  
-  // Piece names mapping (NO PAWN - we'll infer it)
+
   const pieceMap = {
     'knight': 'n',
-    'night': 'n',    // Common mishearing
+    'night': 'n',
     'bishop': 'b',
     'rook': 'r',
     'queen': 'q',
     'king': 'k'
   };
-  
-  // Extract piece type from text
+
   let pieceType = null;
   for (const [name, code] of Object.entries(pieceMap)) {
     if (normalizedText.includes(name)) {
@@ -59,46 +51,39 @@ function extractMove(normalizedText) {
       break;
     }
   }
-  
-  // Normalize spaces around numbers and letters for square detection
+
   const compact = normalizedText.replace(/\b([a-h])\s*([1-8])\b/g, "$1$2");
-  
-  // Try format: "a2 to a3" or "e2 to e4"
+
   const explicitMove = compact.match(/\b([a-h][1-8])\s*(?:to|2|too)\s*([a-h][1-8])\b/);
   if (explicitMove) {
     return { from: explicitMove[1], to: explicitMove[2] };
   }
-  
-  // Check for pawn capture: "a takes b5" or "e takes d4"
+
   const pawnCapture = compact.match(/\b([a-h])\s*(?:take|capture)s?\s*([a-h][1-8])\b/);
   if (pawnCapture) {
     return {
       piece: 'p',
       to: pawnCapture[2],
       capture: true,
-      fromFile: pawnCapture[1]  // Which file the pawn is on
+      fromFile: pawnCapture[1]
     };
   }
-  
-  // Look for destination square: "a3", "e4", "f3"
+
   const squareMatch = compact.match(/\b([a-h][1-8])\b/);
   if (!squareMatch) {
     return null;
   }
-  
+
   const targetSquare = squareMatch[1];
-  
-  // Check if it's a capture (for pieces other than pawns)
   const isCapture = normalizedText.includes('take') || normalizedText.includes('capture');
-  
+
   return {
-    piece: pieceType,  // null for pawn moves like "e4"
+    piece: pieceType,
     to: targetSquare,
     capture: isCapture
   };
 }
 
-// --- Local Whisper Server ---
 const WHISPER_API_URL = "http://localhost:5000/transcribe";
 
 async function transcribeWithWhisper(audioBlob) {
@@ -111,25 +96,20 @@ async function transcribeWithWhisper(audioBlob) {
       body: formData
     });
     if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}));
-      const msg = errBody?.error?.message || response.statusText;
-      throw new Error(`Whisper API error ${response.status}: ${msg}`);
+      throw new Error("Transcription failed");
     }
     const result = await response.json();
     return result.text;
   } catch (error) {
-    console.error("Transcription error:", error);
-    return { error: error.message };
+    return { error: "Could not transcribe audio. Make sure the Whisper server is running." };
   }
 }
 
-// --- MediaRecorder setup ---
 let mediaRecorder;
 let audioChunks = [];
-let recognition; // Web Speech API for real-time "confirm" detection
+let recognition;
 let isRecording = false;
 
-// Initialize Web Speech API
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition) {
   recognition = new SpeechRecognition();
@@ -142,7 +122,7 @@ let autoListenEnabled = false;
 
 async function startRecording() {
   if (isRecording) return;
-  
+
   if (!SpeechRecognition) {
     speechOutput.textContent = "Speech recognition not supported in this browser.";
     speechOutput.style.color = "#dc3545";
@@ -167,9 +147,8 @@ async function startRecording() {
 
       const transcript = await transcribeWithWhisper(audioBlob);
       if (transcript && typeof transcript === "string") {
-        // Remove "confirm" from the transcript
         const cleanedTranscript = transcript.replace(/\bconfirm\b/gi, "").trim();
-        
+
         speechOutput.textContent = `You said: "${cleanedTranscript}"`;
         speechOutput.style.color = "#28a745";
 
@@ -202,27 +181,22 @@ async function startRecording() {
         speechOutput.style.color = "#dc3545";
       }
 
-      // Stop all mic tracks
       stream.getTracks().forEach(t => t.stop());
       recordBtn.disabled = false;
 
-      // Auto-restart recording after processing
       if (autoListenEnabled) {
         setTimeout(() => startRecording(), 500);
       }
     };
 
-    // Start recording with MediaRecorder
     mediaRecorder.start();
-    
-    // Start Web Speech API for real-time "confirm" detection
+
     recognition.onresult = (event) => {
       let interimTranscript = '';
-      
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript.toLowerCase();
         if (event.results[i].isFinal) {
-          // Check for "confirm" in final results
           if (transcript.includes('confirm')) {
             stopRecording();
             return;
@@ -231,8 +205,7 @@ async function startRecording() {
           interimTranscript += transcript;
         }
       }
-      
-      // Check interim results for "confirm" too
+
       if (interimTranscript.includes('confirm')) {
         stopRecording();
       }
@@ -240,11 +213,9 @@ async function startRecording() {
 
     recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
-      // Don't stop recording on recognition errors, just log them
     };
 
     recognition.onend = () => {
-      // Auto-restart recognition if still recording (unless we stopped intentionally)
       if (isRecording && mediaRecorder && mediaRecorder.state === "recording") {
         try {
           recognition.start();
@@ -278,8 +249,7 @@ function stopRecording() {
   if (mediaRecorder && mediaRecorder.state === "recording") {
     isRecording = false;
     mediaRecorder.stop();
-    
-    // Stop speech recognition
+
     if (recognition) {
       try {
         recognition.stop();
@@ -289,3 +259,15 @@ function stopRecording() {
     }
   }
 }
+
+// Credits:
+// OpenAI Whisper - Speech recognition model used for transcription
+//   https://github.com/openai/whisper
+//   Licensed under MIT License
+//
+// Web Speech API (SpeechRecognition) - Browser-native speech recognition
+//   https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition
+//   W3C Community Draft Report
+//
+// MediaRecorder API - Browser-native audio recording
+//   https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
