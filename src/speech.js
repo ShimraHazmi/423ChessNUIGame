@@ -3,14 +3,14 @@ const speechOutput = document.getElementById("speechOutput");
 
 const commandHandlers = {};
 
-export function onVoiceCommand(command, handler) {
+export function onVoiceCommand(command, handler) { // Handler for commands given by the user
   commandHandlers[command.toLowerCase()] = handler;
 }
 
 function normalizeTranscript(text) {
   if (!text) return "";
-  let normalized = text.toLowerCase();
-  normalized = normalized.replace(/[^a-z0-9\s]/g, " ");
+  let normalized = text.toLowerCase(); // Convert to lowercase for easier matching
+  normalized = normalized.replace(/[^a-z0-9\s]/g, " "); // use regex to replace non-alphanumeric characters with space
   normalized = normalized.replace(/\b(one)\b/g, "1");
   normalized = normalized.replace(/\b(two)\b/g, "2");
   normalized = normalized.replace(/\b(three)\b/g, "3");
@@ -19,11 +19,35 @@ function normalizeTranscript(text) {
   normalized = normalized.replace(/\b(six)\b/g, "6");
   normalized = normalized.replace(/\b(seven)\b/g, "7");
   normalized = normalized.replace(/\b(eight|ate)\b/g, "8");
+
+  // Convert spoken language to chess notation when followed by a rank
+  // Example: "night to see three" -> "night to c3".
+  const spokenFileVariants = {
+    a: ['a', 'ay'],
+    b: ['b', 'be', 'bee'],
+    c: ['c', 'cee', 'see', 'sea'],
+    d: ['d', 'dee'],
+    e: ['e', 'ee'],
+    f: ['f', 'ef'],
+    g: ['g', 'gee'],
+    h: ['h', 'aitch']
+  };
+
+
+  // Loop through each file and its variants, replacing them in the normalized text when followed by a rank number
+  for (const [file, variants] of Object.entries(spokenFileVariants)) { 
+    for (const variant of variants) {
+      const pattern = new RegExp(`\\b${variant}\\s*([1-8])\\b`, "g");
+      normalized = normalized.replace(pattern, `${file}$1`);
+    }
+  }
+
+  // Remove extra spaces and trim the text
   normalized = normalized.replace(/\s+/g, " ").trim();
   return normalized;
 }
 
-function extractMove(normalizedText) {
+function extractMove(normalizedText) { // Returns an object with move details or null if no move found
   if (!normalizedText) return null;
 
   console.log('Parsing:', normalizedText);
@@ -35,7 +59,7 @@ function extractMove(normalizedText) {
     return { special: 'O-O-O' };
   }
 
-  const pieceMap = {
+  const pieceMap = { // Map the spoken piece names to chess notation for easier parsing
     'knight': 'n',
     'night': 'n',
     'bishop': 'b',
@@ -44,22 +68,22 @@ function extractMove(normalizedText) {
     'king': 'k'
   };
 
-  let pieceType = null;
-  for (const [name, code] of Object.entries(pieceMap)) {
+  let pieceType = null; // Default to pawn if no piece type is mentioned
+  for (const [name, code] of Object.entries(pieceMap)) { // Check if the normalized text includes the piece name
     if (normalizedText.includes(name)) {
       pieceType = code;
       break;
     }
   }
 
-  const compact = normalizedText.replace(/\b([a-h])\s*([1-8])\b/g, "$1$2");
+  const compact = normalizedText.replace(/\b([a-h])\s*([1-8])\b/g, "$1$2"); // Remove spaces in square names to help with regex matching
 
-  const explicitMove = compact.match(/\b([a-h][1-8])\s*(?:to|2|too)\s*([a-h][1-8])\b/);
+  const explicitMove = compact.match(/\b([a-h][1-8])\s*(?:to|2|too)\s*([a-h][1-8])\b/); // Match patterns like "e2 to e4" or "e2 2 e4"
   if (explicitMove) {
     return { from: explicitMove[1], to: explicitMove[2] };
   }
 
-  const pawnCapture = compact.match(/\b([a-h])\s*(?:take|capture)s?\s*([a-h][1-8])\b/);
+  const pawnCapture = compact.match(/\b([a-h])\s*(?:take|capture)s?\s*([a-h][1-8])\b/); // Match patterns like "e takes d5" or "e capture d5"
   if (pawnCapture) {
     return {
       piece: 'p',
@@ -69,24 +93,24 @@ function extractMove(normalizedText) {
     };
   }
 
-  const squareMatch = compact.match(/\b([a-h][1-8])\b/);
+  const squareMatch = compact.match(/\b([a-h][1-8])\b/); // Match patterns like "e4" or "a3"
   if (!squareMatch) {
     return null;
   }
 
-  const targetSquare = squareMatch[1];
-  const isCapture = normalizedText.includes('take') || normalizedText.includes('capture');
+  const targetSquare = squareMatch[1]; // The square mentioned in the command is likely the destination square
+  const isCapture = normalizedText.includes('take') || normalizedText.includes('capture'); // If the command includes "take" or "capture", assume it's capture
 
-  return {
+  return { // If no explicit piece type is mentioned, default to pawn. Otherwise, use the identified piece type.
     piece: pieceType,
     to: targetSquare,
     capture: isCapture
   };
 }
 
-const WHISPER_API_URL = "http://localhost:5000/transcribe";
+const WHISPER_API_URL = "http://localhost:5000/transcribe"; // URL of the local Whisper server for transcription
 
-async function transcribeWithWhisper(audioBlob) {
+async function transcribeWithWhisper(audioBlob) { // Send the recorded audio to the Whisper server and return the transcribed text
   const formData = new FormData();
   formData.append("file", audioBlob, "audio.webm");
 
@@ -110,6 +134,7 @@ let audioChunks = [];
 let recognition;
 let isRecording = false;
 
+// Check for browser support of SpeechRecognition API and initialize it if available
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition) {
   recognition = new SpeechRecognition();
@@ -120,7 +145,7 @@ if (SpeechRecognition) {
 
 let autoListenEnabled = false;
 
-async function startRecording() {
+async function startRecording() { 
   if (isRecording) return;
 
   if (!SpeechRecognition) {
@@ -147,7 +172,7 @@ async function startRecording() {
 
       const transcript = await transcribeWithWhisper(audioBlob);
       if (transcript && typeof transcript === "string") {
-        const cleanedTranscript = transcript.replace(/\bconfirm\b/gi, "").trim();
+        const cleanedTranscript = transcript.replace(/\bconfirm\b/gi, "").trim(); // Remove "confirm" from the transcript as it's just a signal to stop recording
 
         speechOutput.textContent = `You said: "${cleanedTranscript}"`;
         speechOutput.style.color = "#28a745";
@@ -192,22 +217,22 @@ async function startRecording() {
     mediaRecorder.start();
 
     recognition.onresult = (event) => {
-      let interimTranscript = '';
-
+      let duringTranscript = '';
+      // Loop through the results starting from the index of the latest result
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript.toLowerCase();
         if (event.results[i].isFinal) {
-          if (transcript.includes('confirm')) {
+          if (transcript.includes('confirm')) { // If the user says "confirm", stop recording immediately
             stopRecording();
             return;
           }
         } else {
-          interimTranscript += transcript;
+          duringTranscript += transcript;
         }
       }
 
-      if (interimTranscript.includes('confirm')) {
-        stopRecording();
+      if (duringTranscript.includes('confirm')) {
+        stopRecording(); 
       }
     };
 
@@ -227,7 +252,7 @@ async function startRecording() {
 
     recognition.start();
 
-    speechOutput.textContent = "🎤 Recording... Say 'confirm' when done.";
+    speechOutput.textContent = "Recording... Say 'confirm' when done.";
     speechOutput.style.color = "#667eea";
     recordBtn.disabled = true;
 
@@ -240,11 +265,12 @@ async function startRecording() {
   }
 }
 
-recordBtn.onclick = async () => {
+recordBtn.onclick = async () => { // Start recording when the button is clicked
   autoListenEnabled = true;
   startRecording();
 };
 
+// Stop recording when the user clicks the button again or says "confirm"
 function stopRecording() {
   if (mediaRecorder && mediaRecorder.state === "recording") {
     isRecording = false;

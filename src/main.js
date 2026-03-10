@@ -4,9 +4,7 @@ import { onVoiceCommand } from "./speech.js";
 // chess.js game instance (loaded from CDN as global)
 var board = null
 var game = new Chess()
-var $status = $('#speechOutput')  // Using your existing speechOutput div
-var $fen = $('#fen')
-var $pgn = $('#pgn')
+var $status = $('#speechOutput')
 
 // --- timer state ---
 let whiteSeconds = 0
@@ -15,17 +13,21 @@ let activeColor = 'white'
 let timerInterval = null
 let isPaused = false
 
-const timerContainer = document.getElementById('timerContainer')
+const timerContainer = document.getElementById('timerContainer') // Timer display elements
 const whiteTimerEl = document.getElementById('whiteTimer')
 const blackTimerEl = document.getElementById('blackTimer')
 const timerStatusEl = document.getElementById('timerStatus')
 
+
+// Format time correctly on the gui
 function formatTime(s) {
   const m = Math.floor(s / 60).toString().padStart(2, '0')
   const sec = (s % 60).toString().padStart(2, '0')
   return `${m}:${sec}`
 }
 
+
+// Update the timer display and highlight the active player
 function updateTimerDisplay() {
   whiteTimerEl.textContent = formatTime(whiteSeconds)
   blackTimerEl.textContent = formatTime(blackSeconds)
@@ -33,12 +35,16 @@ function updateTimerDisplay() {
   blackTimerEl.classList.toggle('active-timer', activeColor === 'black' && !isPaused)
 }
 
+
+// Increment the active player's timer every second
 function tickTimer() {
   if (activeColor === 'white') whiteSeconds++
   else blackSeconds++
   updateTimerDisplay()
 }
 
+
+// Start the timer when a new game begins
 function startTimer() {
   if (timerInterval) clearInterval(timerInterval)
   isPaused = false
@@ -48,6 +54,8 @@ function startTimer() {
   updateTimerDisplay()
 }
 
+
+// Pause the timer whenever user requests or opens menu, etc...
 function pauseTimer() {
   if (timerInterval) clearInterval(timerInterval)
   timerInterval = null
@@ -57,6 +65,8 @@ function pauseTimer() {
   updateTimerDisplay()
 }
 
+
+// Resume the timer when user requests or closes menu, etc...
 function resumeTimer() {
   if (isPaused) {
     isPaused = false
@@ -67,6 +77,8 @@ function resumeTimer() {
   }
 }
 
+
+// Reset the timer to initial state when starting a new game
 function resetTimer() {
   if (timerInterval) clearInterval(timerInterval)
   timerInterval = null
@@ -79,12 +91,16 @@ function resetTimer() {
   updateTimerDisplay()
 }
 
+
+
 // switch the clock after each move
 function switchClock() {
   activeColor = activeColor === 'white' ? 'black' : 'white'
   updateTimerDisplay()
 }
 
+
+// Chess pick up mechanism: only allow picking up pieces if it's the player's turn and the game is not over
 function onDragStart (source, piece, position, orientation) {
   // do not pick up pieces if the game is over
   if (game.game_over()) return false
@@ -96,12 +112,14 @@ function onDragStart (source, piece, position, orientation) {
   }
 }
 
+
+// 
 function onDrop (source, target) {
   // see if the move is legal
   var move = game.move({
     from: source,
     to: target,
-    promotion: 'q' // NOTE: always promote to a queen for example simplicity
+    promotion: 'q' // always promote to a queen for simplicity
   })
 
   // illegal move
@@ -131,14 +149,14 @@ function updateStatus () {
     status = 'Game over, ' + moveColor + ' is in checkmate.'
     // Show winning screen
     const winner = moveColor === 'White' ? 'Black' : 'White'
-    showWinningModal(winner, 'checkmate')
+    showWinningPopup(winner, 'checkmate')
     pauseTimer()
   }
 
   // draw?
   else if (game.in_draw()) {
     status = 'Game over, drawn position'
-    showWinningModal(null, 'draw')
+    showWinningPopup(null, 'draw')
     pauseTimer()
   }
 
@@ -153,9 +171,6 @@ function updateStatus () {
   }
 
   $status.html(status)
-  // Optionally display FEN and PGN if you add those divs to your HTML
-  // $fen.html(game.fen())
-  // $pgn.html(game.pgn())
 }
 
 var config = {
@@ -164,73 +179,58 @@ var config = {
   onDragStart: onDragStart,
   onDrop: onDrop,
   onSnapEnd: onSnapEnd,
-  pieceTheme: './src/chessboardjs-1.0.0/img/chesspieces/wikipedia/{piece}.png'  // Your piece theme
+  pieceTheme: './src/chessboardjs-1.0.0/img/chesspieces/wikipedia/{piece}.png'
 }
-board = Chessboard('board', config)  // 'board' matches your HTML div id
+board = Chessboard('board', config)
 
 updateStatus()
 
+
+// Get a hint from Lichess API and display it to the user
 async function getHint() {
-    if (game.game_over()) {
+    if (game.game_over()) { // Game is already over so no hints available
         $status.html('Game is already over');
         return;
     }
     
-    $status.html('Analyzing...');
+    $status.html('Analyzing...'); 
     
     try {
-        const fen = game.fen();
-        const response = await fetch(`https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=1`);
+        const fen = game.fen(); // Get current position in FEN format
+        const response = await fetch(`https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=1`); // Call Lichess API for analysis
         const data = await response.json();
         
-        if (data.pvs && data.pvs[0]) {
-            const moveUCI = data.pvs[0].moves.split(' ')[0];
-            const from = moveUCI.substring(0, 2);
-            const to = moveUCI.substring(2, 4);
-            const eval_cp = data.pvs[0].cp || 0;
-            const eval_pawns = (eval_cp / 100).toFixed(1);
+        if (data.pvs && data.pvs[0]) { // If analysis is available
+            const moveUCI = data.pvs[0].moves.split(' ')[0]; // Get the best move in UCI format (e.g. e2e4)
+            const from = moveUCI.substring(0, 2); // Extract the 'from' square
+            const to = moveUCI.substring(2, 4); // Extract the 'to' square
+            const eval_cp = data.pvs[0].cp || 0; // Evaluation in centipawns (positive means advantage for white, negative for black)
+            const eval_pawns = (eval_cp / 100).toFixed(1); // Convert to pawn units for easier understanding
             
-            const color = game.turn() === 'w' ? 'White' : 'Black';
-            $status.html(`💡 Best move for ${color}: ${from} to ${to} (Eval: ${eval_pawns})`);
+            const color = game.turn() === 'w' ? 'White' : 'Black'; // Determine which side is to move
+            $status.html(`💡 Best move for ${color}: ${from} to ${to} (Eval: ${eval_pawns})`); // Display the best move and evaluation
             
             // Highlight squares
-            $('.square-55d63').removeClass('hint-from hint-to');
-            $('.square-' + from).addClass('hint-from');
-            $('.square-' + to).addClass('hint-to');
+            $('.square-55d63').removeClass('hint-from hint-to'); // Clear previous hints
+            $('.square-' + from).addClass('hint-from'); // Highlight the 'from' square
+            $('.square-' + to).addClass('hint-to'); // Highlight the 'to' square
             
-            setTimeout(() => {
+            setTimeout(() => { // Clear highlights after 5 seconds
                 $('.square-55d63').removeClass('hint-from hint-to');
                 updateStatus();
             }, 5000);
-        } else {
-            $status.html('❌ No analysis available');
+        } else { // No analysis available, maybe due to API issues or the position is too complex
+            $status.html('No Analysis Available! Please try again.');
         }
-    } catch (error) {
-        $status.html('❌ Analysis failed');
+    } catch (error) { // Handle network errors or API issues
+        $status.html('Analysis failed! :(');
         console.error(error);
     }
 }
 
-// Convert UCI notation (e2e4) to readable notation (e4)
-function convertUCItoSAN(uci) {
-    const from = uci.substring(0, 2);
-    const to = uci.substring(2, 4);
-    const piece = game.get(from);
-    
-    if (!piece) return uci;
-    
-    const pieceSymbols = {
-        'p': '',
-        'n': 'N',
-        'b': 'B',
-        'r': 'R',
-        'q': 'Q',
-        'k': 'K'
-    };
-    
-    return pieceSymbols[piece.type] + to;
-}
-// Wire up your Start and Clear buttons
+
+
+// Handle Start and Clear buttons
 $('.start-btn').on('click', function() {
   game.reset()
   board.start()
@@ -239,6 +239,8 @@ $('.start-btn').on('click', function() {
   startTimer()
   updateStatus()
 })
+
+
 
 $('.clear-btn').on('click', function() {
   game.clear()
@@ -249,7 +251,9 @@ $('.clear-btn').on('click', function() {
   $status.html('Board cleared')
 })
 
-// wire up voice commands
+
+
+// Handle voice commands
 onVoiceCommand('start', function() {
   game.reset()
   board.start()
@@ -259,6 +263,8 @@ onVoiceCommand('start', function() {
   updateStatus()
 })
 
+
+// Clear the board and stop the timer, but don't reset the timer values so that if user starts again they can see how long they were playing before
 onVoiceCommand('clear', function() {
   game.clear()
   board.clear()
@@ -267,17 +273,22 @@ onVoiceCommand('clear', function() {
   timerContainer.classList.add('hidden')
 })
 
+
 onVoiceCommand('pause', pauseTimer)
 onVoiceCommand('resume', resumeTimer)
+
 
 // Open main menu on voice command
 onVoiceCommand('menu', function() {
   menuPopup.classList.remove('hidden')
 })
 
+
 onVoiceCommand('settings', function() {
   menuPopup.classList.remove('hidden')
 })
+
+
 
 onVoiceCommand('reset', function() {
   game.reset()
@@ -288,7 +299,9 @@ onVoiceCommand('reset', function() {
   updateStatus()
 })
 
-onVoiceCommand('wow', function() {
+
+
+onVoiceCommand('hint', function() {
   if (game.game_over()) {
     $status.html('No game in progress.')
     $status.css('color', '#dc3545')
@@ -297,31 +310,38 @@ onVoiceCommand('wow', function() {
   getHint()
 })
 
-onVoiceCommand('resign', function() {
+
+
+onVoiceCommand('resign', function(_, transcript = '') {
     if (game.game_over()) {
         $status.html('Game is already over');
         return;
     }
     
-    // Determine who resigned
-    let loser;
-    let winner;
-    
-    if (game.turn() === 'w') {
-        loser = 'White';
-        winner = 'Black';
+    // Allow explicit resign commands like "white resign" / "black resign".
+    // If not explicit, default to side-to-move resigning.
+    const normalizedTranscript = transcript.toLowerCase()
+    let loser
+    if (normalizedTranscript.includes('white')) { // If the user says "white resign"
+      loser = 'White'
+    } else if (normalizedTranscript.includes('black')) { // If the user says "black resign"
+      loser = 'Black'
     } else {
-        loser = 'Black';
-        winner = 'White';
+      loser = game.turn() === 'w' ? 'White' : 'Black' // If the transcript doesn't specify, assume the player whose turn it is wants to resign.
     }
+
+    const winner = loser === 'White' ? 'Black' : 'White'
     
     $status.html(`${loser} resigns. ${winner} wins!`);
+    showWinningPopup(winner, 'resign', loser) // Show winning popup with the winner and loser information
     
     if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
     }
 })
+
+
 
 // Handle chess moves from voice commands
 onVoiceCommand('move', function(moveData, transcript) {
@@ -352,7 +372,7 @@ onVoiceCommand('move', function(moveData, transcript) {
   }
   // Handle moves to a square
   else if (moveData.to) {
-    const moves = game.moves({ verbose: true })
+    const moves = game.moves({ verbose: true }) // Get all legal moves in verbose format to filter through
     const targetSquare = moveData.to
     
     let matchingMoves = moves.filter(m => m.to === targetSquare)
@@ -361,11 +381,11 @@ onVoiceCommand('move', function(moveData, transcript) {
     if (moveData.piece) {
       matchingMoves = matchingMoves.filter(m => m.piece === moveData.piece)
     } else {
-      // No piece specified - assume pawn (like "e4" or "a3")
+      // No piece specified so assume pawn (like "e4" or "a3")
       matchingMoves = matchingMoves.filter(m => m.piece === 'p')
     }
     
-    // For pawn captures with file: "a takes b5"
+    // For pawn captures such as: "a takes b5"
     if (moveData.fromFile && moveData.piece === 'p') {
       matchingMoves = matchingMoves.filter(m => m.from[0] === moveData.fromFile)
     }
@@ -375,14 +395,14 @@ onVoiceCommand('move', function(moveData, transcript) {
       matchingMoves = matchingMoves.filter(m => m.captured)
     }
     
-    if (matchingMoves.length === 1) {
+    if (matchingMoves.length === 1) { // Only one legal move matches the criteria, so execute it
       move = game.move({
         from: matchingMoves[0].from,
         to: matchingMoves[0].to,
-        promotion: 'q'
+        promotion: 'q' // if the move is a promotion, always promote to a queen for simplicity
       })
     } else if (matchingMoves.length > 1) {
-      $status.html(`Ambiguous! Multiple pieces can move to ${targetSquare}. Be more specific.`)
+      $status.html(`Ambiguous! Multiple pieces can move to ${targetSquare}. Be more specific.`) // Feedback loop
       $status.css('color', '#ffa500')
       setTimeout(() => $status.css('color', '#333'), 4000)
       return
@@ -394,7 +414,7 @@ onVoiceCommand('move', function(moveData, transcript) {
     }
   }
 
-  if (move) {
+  if (move) { // Valid move was made
     board.position(game.fen())
     switchClock()
     updateStatus()
@@ -453,33 +473,52 @@ resetMenuBtn.addEventListener('click', function() {
   menuPopup.classList.add('hidden')
 })
 
-// Winning modal functionality
-const winningModal = document.getElementById('winningModal')
-const winningIcon = document.getElementById('winningIcon')
+// Winning screen functionality
+const winningModal = document.getElementById('winningPopup')
+// const winningIcon = document.getElementById('winningIcon')
 const winningTitle = document.getElementById('winningTitle')
 const winningMessage = document.getElementById('winningMessage')
 const playAgainBtn = document.getElementById('playAgainBtn')
-const closeModalBtn = document.getElementById('closeModalBtn')
+const closePopupBtn = document.getElementById('closePopupBtn')
 
-function showWinningModal(winner, type) {
+
+function stopTimerAndClearBoard() { // Helper function to stop the timer and clear the board when the game ends
+  if (timerInterval) clearInterval(timerInterval)
+  timerInterval = null
+  isPaused = true
+  timerStatusEl.textContent = 'Game over'
+  timerStatusEl.classList.add('paused')
+  game.clear()
+  board.clear()
+  updateTimerDisplay()
+}
+
+
+
+function showWinningPopup(winner, type, loser = null) { // type can be 'checkmate', 'draw', or 'resign'. loser is only relevant for resignation to show who resigned
+  stopTimerAndClearBoard()
+
   if (type === 'checkmate') {
     winningTitle.textContent = 'Checkmate!'
     winningMessage.textContent = `${winner} wins!`
   } else if (type === 'draw') {
     winningTitle.textContent = 'Draw!'
     winningMessage.textContent = 'The game is a draw'
+  } else if (type === 'resign') {
+    winningTitle.textContent = 'Resignation'
+    winningMessage.textContent = loser ? `${loser} resigns. ${winner} wins!` : `${winner} wins by resignation!`
   }
   
   winningModal.classList.remove('hidden')
 }
 
-function hideWinningModal() {
+function hideWinningPopup() {
   winningModal.classList.add('hidden')
 }
 
-// Play Again button - resets the game
+// Play Again button: resets the game
 playAgainBtn.addEventListener('click', function() {
-  hideWinningModal()
+  hideWinningPopup()
   game.reset()
   board.start()
   resetTimer()
@@ -488,9 +527,9 @@ playAgainBtn.addEventListener('click', function() {
   updateStatus()
 })
 
-// Close button - just closes the modal
-closeModalBtn.addEventListener('click', function() {
-  hideWinningModal()
+// Close button: just closes the pop up
+closePopupBtn.addEventListener('click', function() {
+  hideWinningPopup()
 })
 
 // Export for other modules if needed
