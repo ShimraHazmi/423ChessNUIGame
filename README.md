@@ -29,7 +29,7 @@ Create `src/config.js` with:
 ```js
 export const OPENAI_API_KEY = "";
 ```
-(Leave the key empty — it's no longer used. The file just needs to exist.)
+(Leave the key empty. It's no longer used. The file just needs to exist.)
 
 ### 3. Set up Python environment
 ```bash
