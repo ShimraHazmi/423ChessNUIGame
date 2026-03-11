@@ -6,6 +6,7 @@ imports and documentation:
 - frontend chessboard and pieces found here:
 https://chessboardjs.com/#start
 
+AI was utilized to help set up Whisper API in this project.
 
 ---
 
