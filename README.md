@@ -6,7 +6,7 @@ imports and documentation:
 - frontend chessboard and pieces found here:
 https://chessboardjs.com/#start
 
-AI was NOT used in any way shape or form :<
+AI was utilized to help set up Whisper API in this project.
 
 ---
 
@@ -29,7 +29,7 @@ Create `src/config.js` with:
 ```js
 export const OPENAI_API_KEY = "";
 ```
-(Leave the key empty — it's no longer used. The file just needs to exist.)
+(Leave the key empty. It's no longer used. The file just needs to exist.)
 
 ### 3. Set up Python environment
 ```bash
