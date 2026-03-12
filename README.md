@@ -13,7 +13,7 @@ AI was utilized to help set up Whisper API in this project.
 ## Setup & Running
 
 ### Prerequisites
-- Discrete GPU prefered, but as it is ran locally with the base model, your laptop should run it fine unless it is garbage
+- Discrete GPU prefered, but as it is ran locally with the base model, your laptop should run it fine.
 - VsCode if available
 - Python 3.x, Vscode python extension recommended as well
 - Node.js
