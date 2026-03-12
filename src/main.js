@@ -208,7 +208,7 @@ async function getHint() {
             const eval_pawns = (eval_cp / 100).toFixed(1); // Convert to pawn units for easier understanding
             
             const color = game.turn() === 'w' ? 'White' : 'Black'; // Determine which side is to move
-            $status.html(`💡 Best move for ${color}: ${from} to ${to} (Eval: ${eval_pawns})`); // Display the best move and evaluation
+            $status.html(`Best move for ${color}: ${from} to ${to} (Eval: ${eval_pawns})`); // Display the best move and evaluation
             
             // Highlight squares
             $('.square-55d63').removeClass('hint-from hint-to'); // Clear previous hints
