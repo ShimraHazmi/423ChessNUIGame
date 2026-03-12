@@ -21,7 +21,7 @@ function normalizeTranscript(text) {
   normalized = normalized.replace(/\b(eight|ate)\b/g, "8");
 
   // Convert spoken language to chess notation when followed by a rank
-  // Example: "night to see three" -> "night to c3".
+  // Example: "night to see three" -> "knight to c3".
   const spokenFileVariants = {
     a: ['a', 'ay'],
     b: ['b', 'be', 'bee'],
@@ -155,12 +155,12 @@ async function startRecording() {
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // Request microphone access
     mediaRecorder = new MediaRecorder(stream);
     audioChunks = [];
     isRecording = true;
 
-    mediaRecorder.ondataavailable = (event) => {
+    mediaRecorder.ondataavailable = (event) => { // Collect audio data chunks as they become available
       if (event.data.size > 0) audioChunks.push(event.data);
     };
 
@@ -177,15 +177,15 @@ async function startRecording() {
         speechOutput.textContent = `You said: "${cleanedTranscript}"`;
         speechOutput.style.color = "#28a745";
 
-        const normalized = normalizeTranscript(cleanedTranscript);
+        const normalized = normalizeTranscript(cleanedTranscript); // Normalize the transcript for easier command matching
         const moveData = extractMove(normalized);
         let matched = false;
 
-        if (moveData && commandHandlers.move) {
+        if (moveData && commandHandlers.move) { // If a move is detected in the transcript and a move handler is registered, call it with the move data
           commandHandlers.move(moveData, cleanedTranscript);
           matched = true;
         } else {
-          for (const cmd in commandHandlers) {
+          for (const cmd in commandHandlers) { // Check if any registered command is included in the normalized transcript and call its handler if found
             if (normalized.includes(cmd)) {
               commandHandlers[cmd](null, cleanedTranscript);
               matched = true;
