@@ -13,6 +13,9 @@ let activeColor = 'white'
 let timerInterval = null
 let isPaused = false
 
+// --- hint state ---
+let lastHint = null // Stores {from, to} squares for the last hint move
+
 const timerContainer = document.getElementById('timerContainer') // Timer display elements
 const whiteTimerEl = document.getElementById('whiteTimer')
 const blackTimerEl = document.getElementById('blackTimer')
@@ -208,17 +211,21 @@ async function getHint() {
             const eval_pawns = (eval_cp / 100).toFixed(1); // Convert to pawn units for easier understanding
             
             const color = game.turn() === 'w' ? 'White' : 'Black'; // Determine which side is to move
-            $status.html(`Best move for ${color}: ${from} to ${to} (Eval: ${eval_pawns})`); // Display the best move and evaluation
+            $status.html(`Best move for ${color}: ${from} to ${to} (Eval: ${eval_pawns}). Say 'take hint' to play this move.`); // Display the best move and evaluation
+            
+            // Store the hint move so user can execute it with voice command
+            lastHint = { from, to };
             
             // Highlight squares
             $('.square-55d63').removeClass('hint-from hint-to'); // Clear previous hints
             $('.square-' + from).addClass('hint-from'); // Highlight the 'from' square
             $('.square-' + to).addClass('hint-to'); // Highlight the 'to' square
             
-            setTimeout(() => { // Clear highlights after 5 seconds
+            setTimeout(() => { // Clear highlights after 30 seconds
                 $('.square-55d63').removeClass('hint-from hint-to');
+                lastHint = null; // Clear stored hint when highlights are removed
                 updateStatus();
-            }, 5000);
+            }, 30000);
         } else { // No analysis available, maybe due to API issues or the position is too complex
             $status.html('No Analysis Available! Please try again.');
         }
@@ -265,7 +272,12 @@ onVoiceCommand('start', function() {
 
 
 // Clear the board and stop the timer, but don't reset the timer values so that if user starts again they can see how long they were playing before
-onVoiceCommand('clear', function() {
+onVoiceCommand('quit', function(_, transcript = '') {
+  const transcriptLower = transcript.toLowerCase()
+  if (!transcriptLower.includes('game')) {
+    return
+  }
+
   game.clear()
   board.clear()
   if (timerInterval) clearInterval(timerInterval)
@@ -289,6 +301,14 @@ onVoiceCommand('settings', function() {
 })
 
 
+// Close menu on voice command (handle variations: "close menu", "close the menu", etc.)
+onVoiceCommand('close menu', function(_, transcript) {
+  const transcriptLower = transcript.toLowerCase()
+  if (transcriptLower.includes('close') && transcriptLower.includes('menu')) {
+    menuPopup.classList.add('hidden')
+  }
+})
+
 
 onVoiceCommand('reset', function() {
   game.reset()
@@ -301,14 +321,63 @@ onVoiceCommand('reset', function() {
 
 
 
-onVoiceCommand('hint', function() {
+function handleHintVoiceCommand(_, transcript = '') {
+  const transcriptLower = transcript.toLowerCase()
+  
+  // Handle "take hint" command - execute the last hint move
+  // Only match "take hint", not just "hint" by itself
+  if (transcriptLower.includes('take') && transcriptLower.includes('hint')) {
+    if (!lastHint) {
+      $status.html('No hint available. Say "hint" first.')
+      $status.css('color', '#dc3545')
+      setTimeout(() => $status.css('color', '#333'), 3000)
+      return
+    }
+    
+    if (game.game_over()) {
+      $status.html('Game over! Cannot make moves.')
+      $status.css('color', '#dc3545')
+      return
+    }
+    
+    // Execute the hint move
+    const move = game.move({
+      from: lastHint.from,
+      to: lastHint.to,
+      promotion: 'q'
+    })
+    
+    if (move) {
+      board.position(game.fen())
+      switchClock()
+      lastHint = null // Clear hint after executing
+      // Clear any remaining hint highlights
+      $('.square-55d63').removeClass('hint-from hint-to')
+      updateStatus()
+    } else {
+      $status.html('Hint move is no longer legal.')
+      $status.css('color', '#dc3545')
+      lastHint = null
+    }
+    return
+  }
+  
+  // Handle "hint" command - get a new hint (only if "take" is NOT in the transcript)
+  if (transcriptLower.includes('take')) {
+    return
+  }
+
   if (game.game_over()) {
     $status.html('No game in progress.')
     $status.css('color', '#dc3545')
     return
   }
   getHint()
-})
+}
+
+
+onVoiceCommand('hint', handleHintVoiceCommand)
+onVoiceCommand('help', handleHintVoiceCommand)
 
 
 
@@ -436,6 +505,9 @@ const menuPopup = document.getElementById('menuPopup')
 const pauseMenuBtn = document.getElementById('pauseMenuBtn')
 const resumeMenuBtn = document.getElementById('resumeMenuBtn')
 const resetMenuBtn = document.getElementById('resetMenuBtn')
+const tipsBtn = document.getElementById('tipsBtn')
+const tipsPopup = document.getElementById('tipsPopup')
+const closeTipsBtn = document.getElementById('closeTipsBtn')
 
 // Toggle menu popup on button click
 menuBtn.addEventListener('click', function(e) {
@@ -471,6 +543,22 @@ resetMenuBtn.addEventListener('click', function() {
   startTimer()
   updateStatus()
   menuPopup.classList.add('hidden')
+})
+
+// Tips popup functionality
+tipsBtn.addEventListener('click', function(e) {
+  e.stopPropagation()
+  tipsPopup.classList.remove('hidden')
+})
+
+closeTipsBtn.addEventListener('click', function() {
+  tipsPopup.classList.add('hidden')
+})
+
+tipsPopup.addEventListener('click', function(e) {
+  if (e.target === tipsPopup) {
+    tipsPopup.classList.add('hidden')
+  }
 })
 
 // Winning screen functionality

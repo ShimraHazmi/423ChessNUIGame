@@ -1,8 +1,10 @@
 import django
 from django.conf import settings
-from django.urls import path
-from django.http import JsonResponse
+from django.urls import path, re_path
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
+from pathlib import Path
+import mimetypes
 import whisper, tempfile, os, sys
 
 settings.configure(
@@ -13,8 +15,10 @@ settings.configure(
 )
 
 print("Loading Whisper model...")
-model = whisper.load_model("base")
+model = whisper.load_model("small") # oginally base
 print("Whisper model ready.")
+
+PROJECT_ROOT = Path(__file__).resolve().parent
 
 @csrf_exempt
 def transcribe(request):
@@ -63,7 +67,42 @@ def transcribe(request):
     response["Access-Control-Allow-Headers"] = "Content-Type"
     return response
 
-urlpatterns = [path("transcribe", transcribe)]
+def _resolve_path(path_fragment):
+    target = (PROJECT_ROOT / path_fragment.lstrip("/")).resolve()
+    try:
+        target.relative_to(PROJECT_ROOT)
+    except ValueError:
+        return None
+    return target
+
+
+def serve_frontend(request, path=""):
+    target = _resolve_path(path)
+    if target is None:
+        return HttpResponseForbidden("Invalid path")
+
+    if path in ("", "/") or target.is_dir():
+        target = PROJECT_ROOT / "index.html"
+
+    if not target.exists() or not target.is_file():
+        return HttpResponseNotFound("Not found")
+
+    content_type, _ = mimetypes.guess_type(str(target))
+    with open(target, "rb") as f:
+        response = HttpResponse(
+            f.read(),
+            content_type=content_type or "application/octet-stream"
+        )
+    if target.suffix in {".js", ".mjs"}:
+        response["Content-Type"] = "application/javascript"
+
+    return response
+
+
+urlpatterns = [
+    path("transcribe", transcribe),
+    re_path(r"^(?P<path>.*)$", serve_frontend),
+]
 
 if __name__ == "__main__":
     sys.argv = ["whisper_server.py", "runserver", "5000", "--noreload"]

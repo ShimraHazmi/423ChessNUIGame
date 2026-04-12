@@ -28,18 +28,18 @@
           <div class="record-btns">
             <button id="recordBtn">Start Recording</button>
           </div>
-          <div id="speechOutput">Say a command and end with "confirm"...</div>
+          <div id="speechOutput">Press Enter (or click Start Recording), speak, then press Enter again to transcribe.</div>
           <div class="voice-commands-list">
             <p><strong>Available commands:</strong></p>
             <ul>
-              <li>"Start game confirm" – start the game &amp; timer</li>
-              <li>"Clear board confirm" – clear all pieces</li>
-              <li>"Pause confirm" – pause the timer</li>
-              <li>"Resume confirm" – resume the timer</li>
-              <li>"Reset confirm" – reset the game &amp; timer</li>
-              <li>"E2 to E4 confirm" – move a piece (say "confirm" to finish)</li>
+              <li>"Start game" – start the game &amp; timer</li>
+              <li>"Quit game" – clear all pieces and stop the timer</li>
+              <li>"Pause" – pause the timer</li>
+              <li>"Resume" – resume the timer</li>
+              <li>"Reset" – reset the game &amp; timer</li>
+              <li>"E2 to E4" – move a piece</li>
             </ul>
-            <p class="info-text">Say "confirm" at the end of your command to stop recording</p>
+            <p class="info-text">Use Enter to start/stop recording and send audio for transcription.</p>
           </div>
         </div>
       </div>
@@ -73,7 +73,8 @@
 
         <div class="start-clear-btns">
           <button class="start-btn">Start Game</button>
-          <button class="clear-btn">Clear Board</button>
+          <button class="clear-btn">Quit Game</button>
+          <button id="tipsBtn" class="tips-btn">Tips</button>
         </div>
       </div>
     </div>
@@ -86,6 +87,23 @@
         <div class="winning-buttons">
           <button id="playAgainBtn" class="play-again-btn">Play Again</button>
           <button id="closePopupBtn" class="close-popup-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tips Popup -->
+    <div id="tipsPopup" class="winning-popup hidden">
+      <div class="winning-content tips-content">
+        <h2 class="winning-title">How to Play</h2>
+        <div class="tips-body">
+          <p>This is a 2-player chess game. You can play against someone else or use both sides yourself.</p>
+          <p>Move pieces by dragging them on the board or by speaking a move such as “e2 to e4”.</p>
+          <p>Press Enter to start recording your voice command, then press Enter again to stop recording and send it for transcription.</p>
+          <p>Ask for a hint by saying “hint” or “I need help”. If you want to play the suggested move immediately, say “take hint”.</p>
+          <p>Use voice commands like “start game”, “quit game”, “pause”, “resume”, and “reset” to control the match.</p>
+        </div>
+        <div class="winning-buttons">
+          <button id="closeTipsBtn" class="close-popup-btn">Close</button>
         </div>
       </div>
     </div>

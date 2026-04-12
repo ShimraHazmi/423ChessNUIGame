@@ -110,6 +110,8 @@ function extractMove(normalizedText) { // Returns an object with move details or
 
 const WHISPER_API_URL = "http://localhost:5000/transcribe"; // URL of the local Whisper server for transcription
 
+//const WHISPER_API_URL = "/transcribe"; // this is for deployment. Comment the above line and uncomment this one when deploying.
+
 async function transcribeWithWhisper(audioBlob) { // Send the recorded audio to the Whisper server and return the transcribed text
   const formData = new FormData();
   formData.append("file", audioBlob, "audio.webm");
@@ -131,25 +133,18 @@ async function transcribeWithWhisper(audioBlob) { // Send the recorded audio to 
 
 let mediaRecorder;
 let audioChunks = [];
-let recognition;
 let isRecording = false;
+let isTranscribing = false;
 
-// Check for browser support of SpeechRecognition API and initialize it if available
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-if (SpeechRecognition) {
-  recognition = new SpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.lang = 'en-US';
+function setRecordingUI(recording) {
+  recordBtn.textContent = recording ? "Stop Recording" : "Start Recording";
 }
 
-let autoListenEnabled = false;
-
 async function startRecording() { 
-  if (isRecording) return;
+  if (isRecording || isTranscribing) return;
 
-  if (!SpeechRecognition) {
-    speechOutput.textContent = "Speech recognition not supported in this browser.";
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    speechOutput.textContent = "Audio recording is not supported in this browser.";
     speechOutput.style.color = "#dc3545";
     return;
   }
@@ -159,6 +154,7 @@ async function startRecording() {
     mediaRecorder = new MediaRecorder(stream);
     audioChunks = [];
     isRecording = true;
+    setRecordingUI(true);
 
     mediaRecorder.ondataavailable = (event) => { // Collect audio data chunks as they become available
       if (event.data.size > 0) audioChunks.push(event.data);
@@ -166,13 +162,24 @@ async function startRecording() {
 
     mediaRecorder.onstop = async () => {
       isRecording = false;
+      setRecordingUI(false);
+
+      if (!audioChunks.length) {
+        speechOutput.textContent = "No audio captured. Try again.";
+        speechOutput.style.color = "#dc3545";
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
+
       const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
       speechOutput.textContent = "Transcribing...";
       speechOutput.style.color = "#667eea";
+      isTranscribing = true;
+      recordBtn.disabled = true;
 
       const transcript = await transcribeWithWhisper(audioBlob);
       if (transcript && typeof transcript === "string") {
-        const cleanedTranscript = transcript.replace(/\bconfirm\b/gi, "").trim(); // Remove "confirm" from the transcript as it's just a signal to stop recording
+        const cleanedTranscript = transcript.trim();
 
         speechOutput.textContent = `You said: "${cleanedTranscript}"`;
         speechOutput.style.color = "#28a745";
@@ -185,12 +192,24 @@ async function startRecording() {
           commandHandlers.move(moveData, cleanedTranscript);
           matched = true;
         } else {
+          if (normalized.includes('close') && normalized.includes('menu')) {
+            const closeMenuHandler = commandHandlers['close menu'] || commandHandlers.close;
+            if (closeMenuHandler) {
+              closeMenuHandler(null, cleanedTranscript);
+              matched = true;
+            }
+          }
+
+          if (matched) {
+            // Skip generic matching so "close menu" doesn't get swallowed by "menu".
+          } else {
           for (const cmd in commandHandlers) { // Check if any registered command is included in the normalized transcript and call its handler if found
             if (normalized.includes(cmd)) {
               commandHandlers[cmd](null, cleanedTranscript);
               matched = true;
               break;
             }
+          }
           }
         }
 
@@ -207,93 +226,65 @@ async function startRecording() {
       }
 
       stream.getTracks().forEach(t => t.stop());
+      isTranscribing = false;
       recordBtn.disabled = false;
-
-      if (autoListenEnabled) {
-        setTimeout(() => startRecording(), 500);
-      }
     };
 
     mediaRecorder.start();
 
-    recognition.onresult = (event) => {
-      let duringTranscript = '';
-      // Loop through the results starting from the index of the latest result
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript.toLowerCase();
-        if (event.results[i].isFinal) {
-          if (transcript.includes('confirm')) { // If the user says "confirm", stop recording immediately
-            stopRecording();
-            return;
-          }
-        } else {
-          duringTranscript += transcript;
-        }
-      }
-
-      if (duringTranscript.includes('confirm')) {
-        stopRecording(); 
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
-    };
-
-    recognition.onend = () => {
-      if (isRecording && mediaRecorder && mediaRecorder.state === "recording") {
-        try {
-          recognition.start();
-        } catch (e) {
-          console.error('Failed to restart recognition:', e);
-        }
-      }
-    };
-
-    recognition.start();
-
-    speechOutput.textContent = "Recording... Say 'confirm' when done.";
+    speechOutput.textContent = "Recording... Press Enter again to stop.";
     speechOutput.style.color = "#667eea";
-    recordBtn.disabled = true;
 
   } catch (error) {
     isRecording = false;
-    autoListenEnabled = false;
+    setRecordingUI(false);
     speechOutput.textContent = "Mic permission denied. Please allow microphone access.";
     speechOutput.style.color = "#dc3545";
     recordBtn.disabled = false;
   }
 }
 
-recordBtn.onclick = async () => { // Start recording when the button is clicked
-  autoListenEnabled = true;
-  startRecording();
+async function toggleRecording() {
+  if (isTranscribing) return;
+  if (isRecording) {
+    stopRecording();
+  } else {
+    await startRecording();
+  }
+}
+
+recordBtn.onclick = () => {
+  toggleRecording();
 };
 
-// Stop recording when the user clicks the button again or says "confirm"
 function stopRecording() {
   if (mediaRecorder && mediaRecorder.state === "recording") {
     isRecording = false;
+    setRecordingUI(false);
+    speechOutput.textContent = "Stopping recording...";
+    speechOutput.style.color = "#667eea";
     mediaRecorder.stop();
-
-    if (recognition) {
-      try {
-        recognition.stop();
-      } catch (e) {
-        console.error('Error stopping recognition:', e);
-      }
-    }
   }
 }
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.repeat) return;
+
+  const target = event.target;
+  const tag = target && target.tagName;
+  const isTypingField = target && (target.isContentEditable || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT");
+  if (isTypingField) return;
+
+  event.preventDefault();
+  toggleRecording();
+});
+
+setRecordingUI(false);
 
 // Credits:
 // OpenAI Whisper - Speech recognition model used for transcription
 //   https://github.com/openai/whisper
 //   Licensed under MIT License
-//
-// Web Speech API (SpeechRecognition) - Browser-native speech recognition
-//   https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition
-//   W3C Community Draft Report
 //
 // MediaRecorder API - Browser-native audio recording
 //   https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
