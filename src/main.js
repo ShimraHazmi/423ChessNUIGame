@@ -378,6 +378,9 @@ function handleHintVoiceCommand(_, transcript = '') {
 
 onVoiceCommand('hint', handleHintVoiceCommand)
 onVoiceCommand('help', handleHintVoiceCommand)
+onVoiceCommand('help me', handleHintVoiceCommand)
+onVoiceCommand('i don t know', handleHintVoiceCommand)
+onVoiceCommand('i dont know', handleHintVoiceCommand)
 
 
 
@@ -429,6 +432,31 @@ onVoiceCommand('move', function(moveData, transcript) {
       move = game.move({ from: 'e1', to: 'g1' }) || game.move({ from: 'e8', to: 'g8' })
     } else if (moveData.special === 'O-O-O') {
       move = game.move({ from: 'e1', to: 'c1' }) || game.move({ from: 'e8', to: 'c8' })
+    }
+  }
+  // Relative directional move: "move pawn at e2 up 1" or "rook from a8 down 2"
+  else if (moveData.from && moveData.relativeDirection && moveData.steps) {
+    const sourcePiece = game.get(moveData.from)
+
+    if (sourcePiece) {
+      if (!moveData.piece || moveData.piece === sourcePiece.type) {
+        const file = moveData.from[0]
+        const rank = Number(moveData.from[1])
+        const step = Number(moveData.steps)
+        const signedDelta = moveData.relativeDirection === 'up'
+          ? (sourcePiece.color === 'w' ? step : -step)
+          : (sourcePiece.color === 'w' ? -step : step)
+        const toRank = rank + signedDelta
+
+        if (toRank >= 1 && toRank <= 8) {
+          const toSquare = `${file}${toRank}`
+          move = game.move({
+            from: moveData.from,
+            to: toSquare,
+            promotion: 'q'
+          })
+        }
+      }
     }
   }
   // Direct move: "a2 to a3" or "e2 to e4"

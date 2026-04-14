@@ -60,6 +60,7 @@ function extractMove(normalizedText) { // Returns an object with move details or
   }
 
   const pieceMap = { // Map the spoken piece names to chess notation for easier parsing
+    'pawn': 'p',
     'knight': 'n',
     'night': 'n',
     'bishop': 'b',
@@ -81,6 +82,17 @@ function extractMove(normalizedText) { // Returns an object with move details or
   const explicitMove = compact.match(/\b([a-h][1-8])\s*(?:to|2|too)\s*([a-h][1-8])\b/); // Match patterns like "e2 to e4" or "e2 2 e4"
   if (explicitMove) {
     return { from: explicitMove[1], to: explicitMove[2] };
+  }
+
+  // Match directional moves like "move pawn at e2 up 1" / "rook from a1 down 2"
+  const directionalMove = compact.match(/\b(?:(?:move)\s+)?(?:(?:pawn|knight|night|bishop|rook|queen|king)\s+)?(?:at|from)\s*([a-h][1-8])\s*(up|down)\s*([1-2])\b/);
+  if (directionalMove) {
+    return {
+      from: directionalMove[1],
+      relativeDirection: directionalMove[2],
+      steps: Number(directionalMove[3]),
+      piece: pieceType
+    };
   }
 
   const pawnCapture = compact.match(/\b([a-h])\s*(?:take|capture)s?\s*([a-h][1-8])\b/); // Match patterns like "e takes d5" or "e capture d5"
