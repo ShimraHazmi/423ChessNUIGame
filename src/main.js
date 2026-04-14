@@ -189,49 +189,42 @@ board = Chessboard('board', config)
 updateStatus()
 
 
-// Get a hint from Lichess API and display it to the user
 async function getHint() {
-    if (game.game_over()) { // Game is already over so no hints available
+    // Check if game is over
+    if (game.game_over()) {
         $status.html('Game is already over');
         return;
     }
     
-    $status.html('Analyzing...'); 
     
     try {
-        const fen = game.fen(); // Get current position in FEN format
-        const response = await fetch(`https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=1`); // Call Lichess API for analysis
+        // Get current board position
+        const fen = game.fen();
+        
+        // Send to Stockfish server
+        const response = await fetch('http://localhost:5001/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fen: fen, depth: 18 })
+        });
+        
         const data = await response.json();
         
-        if (data.pvs && data.pvs[0]) { // If analysis is available
-            const moveUCI = data.pvs[0].moves.split(' ')[0]; // Get the best move in UCI format (e.g. e2e4)
-            const from = moveUCI.substring(0, 2); // Extract the 'from' square
-            const to = moveUCI.substring(2, 4); // Extract the 'to' square
-            const eval_cp = data.pvs[0].cp || 0; // Evaluation in centipawns (positive means advantage for white, negative for black)
-            const eval_pawns = (eval_cp / 100).toFixed(1); // Convert to pawn units for easier understanding
-            
-            const color = game.turn() === 'w' ? 'White' : 'Black'; // Determine which side is to move
-            $status.html(`Best move for ${color}: ${from} to ${to} (Eval: ${eval_pawns}). Say 'take hint' to play this move.`); // Display the best move and evaluation
-            
-            // Store the hint move so user can execute it with voice command
-            lastHint = { from, to };
-            
-            // Highlight squares
-            $('.square-55d63').removeClass('hint-from hint-to'); // Clear previous hints
-            $('.square-' + from).addClass('hint-from'); // Highlight the 'from' square
-            $('.square-' + to).addClass('hint-to'); // Highlight the 'to' square
-            
-            setTimeout(() => { // Clear highlights after 30 seconds
-                $('.square-55d63').removeClass('hint-from hint-to');
-                lastHint = null; // Clear stored hint when highlights are removed
-                updateStatus();
-            }, 30000);
-        } else { // No analysis available, maybe due to API issues or the position is too complex
-            $status.html('No Analysis Available! Please try again.');
-        }
-    } catch (error) { // Handle network errors or API issues
-        $status.html('Analysis failed! :(');
-        console.error(error);
+        // Get the move
+        const move = data.move;
+        const from = move.substring(0, 2);
+        const to = move.substring(2, 4);
+        
+        
+        $status.html(`Best move: ${from} to ${to}`);
+        
+        // Highlight squares
+        $('.square-55d63').removeClass('hint-from hint-to');
+        $('.square-' + from).addClass('hint-from');
+        $('.square-' + to).addClass('hint-to');
+        
+    } catch (error) {
+        $status.html('Analysis failed');
     }
 }
 
