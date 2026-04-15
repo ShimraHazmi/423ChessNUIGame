@@ -15,6 +15,7 @@ let isPaused = false
 
 // --- hint state ---
 let lastHint = null // Stores {from, to} squares for the last hint move
+let hintCleanupTimeout = null
 
 const timerContainer = document.getElementById('timerContainer') // Timer display elements
 const whiteTimerEl = document.getElementById('whiteTimer')
@@ -214,6 +215,11 @@ async function getHint() {
         const move = data.move;
         const from = move.substring(0, 2);
         const to = move.substring(2, 4);
+        lastHint = { from, to }
+
+        if (hintCleanupTimeout) {
+          clearTimeout(hintCleanupTimeout)
+        }
         
         
         $status.html(`Best move: ${from} to ${to}`);
@@ -222,6 +228,11 @@ async function getHint() {
         $('.square-55d63').removeClass('hint-from hint-to');
         $('.square-' + from).addClass('hint-from');
         $('.square-' + to).addClass('hint-to');
+
+        hintCleanupTimeout = setTimeout(() => {
+          $('.square-55d63').removeClass('hint-from hint-to')
+          hintCleanupTimeout = null
+        }, 5000)
         
     } catch (error) {
         $status.html('Analysis failed');
@@ -235,6 +246,12 @@ $('.start-btn').on('click', function() {
   game.reset()
   board.start()
   resetTimer()
+  lastHint = null
+  if (hintCleanupTimeout) {
+    clearTimeout(hintCleanupTimeout)
+    hintCleanupTimeout = null
+  }
+  $('.square-55d63').removeClass('hint-from hint-to')
   timerContainer.classList.remove('hidden')
   startTimer()
   updateStatus()
@@ -247,6 +264,12 @@ $('.clear-btn').on('click', function() {
   board.clear()
   if (timerInterval) clearInterval(timerInterval)
   timerInterval = null
+  lastHint = null
+  if (hintCleanupTimeout) {
+    clearTimeout(hintCleanupTimeout)
+    hintCleanupTimeout = null
+  }
+  $('.square-55d63').removeClass('hint-from hint-to')
   timerContainer.classList.add('hidden')
   $status.html('Board cleared')
 })
@@ -258,6 +281,12 @@ onVoiceCommand('start', function() {
   game.reset()
   board.start()
   resetTimer()
+  lastHint = null
+  if (hintCleanupTimeout) {
+    clearTimeout(hintCleanupTimeout)
+    hintCleanupTimeout = null
+  }
+  $('.square-55d63').removeClass('hint-from hint-to')
   timerContainer.classList.remove('hidden')
   startTimer()
   updateStatus()
@@ -275,6 +304,12 @@ onVoiceCommand('quit', function(_, transcript = '') {
   board.clear()
   if (timerInterval) clearInterval(timerInterval)
   timerInterval = null
+  lastHint = null
+  if (hintCleanupTimeout) {
+    clearTimeout(hintCleanupTimeout)
+    hintCleanupTimeout = null
+  }
+  $('.square-55d63').removeClass('hint-from hint-to')
   timerContainer.classList.add('hidden')
 })
 
@@ -307,6 +342,12 @@ onVoiceCommand('reset', function() {
   game.reset()
   board.start()
   resetTimer()
+  lastHint = null
+  if (hintCleanupTimeout) {
+    clearTimeout(hintCleanupTimeout)
+    hintCleanupTimeout = null
+  }
+  $('.square-55d63').removeClass('hint-from hint-to')
   timerContainer.classList.remove('hidden')
   startTimer()
   updateStatus()
@@ -344,6 +385,10 @@ function handleHintVoiceCommand(_, transcript = '') {
       board.position(game.fen())
       switchClock()
       lastHint = null // Clear hint after executing
+      if (hintCleanupTimeout) {
+        clearTimeout(hintCleanupTimeout)
+        hintCleanupTimeout = null
+      }
       // Clear any remaining hint highlights
       $('.square-55d63').removeClass('hint-from hint-to')
       updateStatus()
