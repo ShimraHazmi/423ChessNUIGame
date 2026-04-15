@@ -35,6 +35,9 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 #^---This will install django backend utilities and OpenAi's whisper api
+Then run:
+pip install flask
+pip install flask_cors
 ```
 
 ### 4. Start the Whisper server (Terminal 1)
@@ -50,7 +53,12 @@ First run will download the Whisper `base` model (~145 MB). Wait for:
 npx serve .
 ```
 
-### 6. Open the app
+### 6. Start the stockfish server (Terminal 3)
+```bash
+python stockfish_server.py
+```
+
+### 7. Open the app
 Go to `http://localhost:3000` in Chrome or Edge. Chromium Browser prefered. Sometimes, if port is taken already, it will use a different port which you will see in the terminal.
 
 ### Voice Commands
