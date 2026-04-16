@@ -189,7 +189,7 @@ async function startRecording() {
       isTranscribing = true;
       recordBtn.disabled = true;
 
-      const transcript = await transcribeWithWhisper(audioBlob);
+      const transcript = await transcribeWithWhisper(audioBlob); // Send audio to Whisper server and get the transcript
       if (transcript && typeof transcript === "string") {
         const cleanedTranscript = transcript.trim();
 
@@ -256,7 +256,7 @@ async function startRecording() {
   }
 }
 
-async function toggleRecording() {
+async function toggleRecording() { // Start or stop recording when the user clicks the button or presses Enter
   if (isTranscribing) return;
   if (isRecording) {
     stopRecording();
@@ -279,7 +279,7 @@ function stopRecording() {
   }
 }
 
-document.addEventListener("keydown", (event) => {
+document.addEventListener("keydown", (event) => { // Allow pressing Enter to start/stop recording, but ignore if the user is typing in an input field
   if (event.key !== "Enter" || event.repeat) return;
 
   const target = event.target;

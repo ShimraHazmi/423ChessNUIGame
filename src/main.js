@@ -177,6 +177,7 @@ function updateStatus () {
   $status.html(status)
 }
 
+// Chessboard.js configuration
 var config = {
   draggable: true,
   position: 'start',
@@ -329,7 +330,7 @@ onVoiceCommand('settings', function() {
 })
 
 
-// Close menu on voice command (handle variations: "close menu", "close the menu", etc.)
+// Close menu on voice command
 onVoiceCommand('close menu', function(_, transcript) {
   const transcriptLower = transcript.toLowerCase()
   if (transcriptLower.includes('close') && transcriptLower.includes('menu')) {
@@ -358,8 +359,8 @@ onVoiceCommand('reset', function() {
 function handleHintVoiceCommand(_, transcript = '') {
   const transcriptLower = transcript.toLowerCase()
   
-  // Handle "take hint" command - execute the last hint move
-  // Only match "take hint", not just "hint" by itself
+  // Handle "take hint" command, execute the last hint move
+  // Only match "take hint", not just "hint" by itself (so that it doesn't trigger asking for a new hint)
   if (transcriptLower.includes('take') && transcriptLower.includes('hint')) {
     if (!lastHint) {
       $status.html('No hint available. Say "hint" first.')
@@ -400,7 +401,7 @@ function handleHintVoiceCommand(_, transcript = '') {
     return
   }
   
-  // Handle "hint" command - get a new hint (only if "take" is NOT in the transcript)
+  // Handle "hint" command, get a new hint (only if "take" is NOT in the transcript)
   if (transcriptLower.includes('take')) {
     return
   }
