@@ -53,7 +53,16 @@ First run will download the Whisper `base` model (~145 MB). Wait for:
 npx serve .
 ```
 
-### 6. Start the stockfish server (Terminal 3)
+### 6. Start the stockfish server (Terminal 3) TESTED ON WINDOWS
+6.1. Download stockfish for your operating system from https://stockfishchess.org/download/
+
+6.2. Extract the zip file
+
+6.3.  Place the executable(.exe) file from the extracted folder into the 'stockfish' folder
+
+6.4.  Rename executable to stockfish.exe
+
+6.5.  Run the server:
 ```bash
 python stockfish_server.py
 ```
