@@ -414,7 +414,7 @@ function handleHintVoiceCommand(_, transcript = '') {
   getHint()
 }
 
-
+//trigger words from user test
 onVoiceCommand('hint', handleHintVoiceCommand)
 onVoiceCommand('help', handleHintVoiceCommand)
 onVoiceCommand('help me', handleHintVoiceCommand)
